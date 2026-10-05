@@ -18,7 +18,8 @@ public class BillerRequest_Dto {
     @Email(message = "Invalid email")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must contain at least 6 characters")
+    
+    
     private String password;
+    private String mobileNumber;
 }

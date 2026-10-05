@@ -56,4 +56,30 @@ public class AuthController {
                 response
         );
     }
+
+    // =====================================================
+    // RESET PASSWORD
+    // =====================================================
+    @PostMapping("/forgot-password")
+    public ResponseEntity<java.util.Map<String, String>> forgotPassword(
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String email = request.get("email");
+        authService.forgotPassword(email);
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+        response.put("message", "OTP sent to email");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<java.util.Map<String, String>> resetPassword(
+            @Valid
+            @RequestBody
+            ResetPasswordRequest_Dto request
+    ) {
+        authService.resetPassword(request);
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+        response.put("message", "Password reset successfully");
+        return ResponseEntity.ok(response);
+    }
 }

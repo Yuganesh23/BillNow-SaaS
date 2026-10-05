@@ -3,6 +3,7 @@ package com.example.Billing.shop;
 import com.example.Billing.auth.User_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShopWhatsAppConfigService {
 
     private final ShopWhatsAppConfigRepository configRepository;
+    private final ShopContextResolver shopContextResolver;
 
 
     // =====================================================
@@ -39,7 +41,7 @@ public class ShopWhatsAppConfigService {
         // -------------------------------------------------
 
         Shop_entity shop =
-                owner.getShop();
+                shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
 
@@ -140,7 +142,7 @@ public class ShopWhatsAppConfigService {
 
 
         Shop_entity shop =
-                owner.getShop();
+                shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
 
@@ -182,7 +184,7 @@ public class ShopWhatsAppConfigService {
 
 
         Shop_entity shop =
-                owner.getShop();
+                shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
 

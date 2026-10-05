@@ -19,6 +19,7 @@ import org.json.JSONObject;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ import java.util.Optional;
 public class SaaSSubscriptionService {
 
     private final RazorpayClient razorpayClient;
+    private final ShopContextResolver shopContextResolver;
 
     private final RazorpayProperties razorpayProperties;
 
@@ -68,7 +70,7 @@ public class SaaSSubscriptionService {
             );
         }
 
-        Shop_entity shop = user.getShop();
+        Shop_entity shop = shopContextResolver.resolveActiveShop(user);
 
         if (shop == null) {
             throw new RuntimeException(
@@ -239,7 +241,7 @@ public class SaaSSubscriptionService {
             );
         }
 
-        Shop_entity shop = user.getShop();
+        Shop_entity shop = shopContextResolver.resolveActiveShop(user);
 
         if (shop == null) {
 
@@ -361,7 +363,7 @@ public class SaaSSubscriptionService {
             );
         }
 
-        Shop_entity shop = user.getShop();
+        Shop_entity shop = shopContextResolver.resolveActiveShop(user);
 
         if (shop == null) {
 
@@ -406,7 +408,7 @@ public class SaaSSubscriptionService {
             );
         }
 
-        Shop_entity shop = user.getShop();
+        Shop_entity shop = shopContextResolver.resolveActiveShop(user);
 
         if (shop == null) {
 

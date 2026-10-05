@@ -4,6 +4,7 @@ import com.example.Billing.auth.User_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final ShopContextResolver shopContextResolver;
 
 
     // =========================================================
@@ -215,21 +217,21 @@ public class CustomerService {
             );
         }
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not associated with a shop"
             );
         }
 
-        if (!user.getShop().isActive()) {
+        if (!shopContextResolver.resolveActiveShop(user).isActive()) {
 
             throw new RuntimeException(
                     "Shop is not active"
             );
         }
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 

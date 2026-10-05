@@ -1,5 +1,7 @@
 package com.example.Billing.invoice;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.customer.CustomerRepository;
 import com.example.Billing.customer.Customer_entity;
@@ -9,9 +11,10 @@ import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +23,12 @@ import java.util.List;
 @Transactional
 public class InvoiceService {
 
+    private final com.example.Billing.notification.EmailService emailService;
+    private final com.example.Billing.invoice.whatsapp.WhatsAppService whatsAppService;
+
+
     private final InvoiceRepository invoiceRepository;
+    private final ShopContextResolver shopContextResolver;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
 
@@ -43,6 +51,32 @@ public class InvoiceService {
 
         Long shopId =
                 shop.getId();
+
+        // -------------------------------------------------
+        // SUBSCRIPTION CHECK
+        // -------------------------------------------------
+        
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
+        
+        if (tier == null) {
+            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
+            shop.setSubscriptionTier(tier);
+            shop.setTrialEndsAt(now.plusDays(7));
+            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
+            // since we added default values it should be TRIAL.
+        }
+        
+        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
+            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
+                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
+            }
+        } else {
+            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
+                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
+            }
+        }
+
 
 
         // -------------------------------------------------
@@ -174,12 +208,12 @@ public class InvoiceService {
             }
 
 
-            Integer requestedQuantity =
+            Double requestedQuantity =
                     itemRequest.getQuantity();
 
 
             if (requestedQuantity == null ||
-                    requestedQuantity <= 0) {
+                    requestedQuantity <= 0.0) {
 
                 throw new RuntimeException(
                         "Quantity must be greater than zero"
@@ -223,7 +257,7 @@ public class InvoiceService {
             // CHECK STOCK
             // ---------------------------------------------
 
-            Integer availableStock =
+            Double availableStock =
                     product.getStockQuantity();
 
 
@@ -283,23 +317,16 @@ public class InvoiceService {
 
             InvoiceItem invoiceItem =
                     InvoiceItem.builder()
-
                             .invoice(invoice)
-
                             .product(product)
-
-                            .quantity(
-                                    requestedQuantity
-                            )
-
-                            .unitPrice(
-                                    unitPrice
-                            )
-
-                            .totalPrice(
-                                    totalPrice
-                            )
-
+                            .quantity(requestedQuantity)
+                            .unitPrice(unitPrice)
+                            .totalPrice(totalPrice)
+                            .taxableAmount(itemRequest.getTaxableAmount() != null ? itemRequest.getTaxableAmount() : BigDecimal.ZERO)
+                            .cgst(itemRequest.getCgst() != null ? itemRequest.getCgst() : BigDecimal.ZERO)
+                            .sgst(itemRequest.getSgst() != null ? itemRequest.getSgst() : BigDecimal.ZERO)
+                            .igst(itemRequest.getIgst() != null ? itemRequest.getIgst() : BigDecimal.ZERO)
+                            .gstRate(itemRequest.getGstRate() != null ? itemRequest.getGstRate() : BigDecimal.ZERO)
                             .build();
 
 
@@ -356,13 +383,14 @@ public class InvoiceService {
                 );
 
 
-        invoice.setSubtotal(
-                subtotal
-        );
-
-        invoice.setTotalAmount(
-                totalAmount
-        );
+        invoice.setSubtotal(subtotal);
+        invoice.setTotalAmount(totalAmount);
+        
+        invoice.setTaxableAmount(request.getTaxableAmount() != null ? request.getTaxableAmount() : BigDecimal.ZERO);
+        invoice.setCgstTotal(request.getCgstTotal() != null ? request.getCgstTotal() : BigDecimal.ZERO);
+        invoice.setSgstTotal(request.getSgstTotal() != null ? request.getSgstTotal() : BigDecimal.ZERO);
+        invoice.setIgstTotal(request.getIgstTotal() != null ? request.getIgstTotal() : BigDecimal.ZERO);
+        invoice.setIsInterState(request.getIsInterState() != null ? request.getIsInterState() : false);
 
 
         // =================================================
@@ -396,6 +424,32 @@ public class InvoiceService {
         Long shopId =
                 shop.getId();
 
+        // -------------------------------------------------
+        // SUBSCRIPTION CHECK
+        // -------------------------------------------------
+        
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
+        
+        if (tier == null) {
+            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
+            shop.setSubscriptionTier(tier);
+            shop.setTrialEndsAt(now.plusDays(7));
+            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
+            // since we added default values it should be TRIAL.
+        }
+        
+        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
+            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
+                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
+            }
+        } else {
+            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
+                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
+            }
+        }
+
+
 
         return invoiceRepository
                 .findByShopIdOrderByCreatedAtDesc(
@@ -422,6 +476,32 @@ public class InvoiceService {
 
         Long shopId =
                 shop.getId();
+
+        // -------------------------------------------------
+        // SUBSCRIPTION CHECK
+        // -------------------------------------------------
+        
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
+        
+        if (tier == null) {
+            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
+            shop.setSubscriptionTier(tier);
+            shop.setTrialEndsAt(now.plusDays(7));
+            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
+            // since we added default values it should be TRIAL.
+        }
+        
+        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
+            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
+                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
+            }
+        } else {
+            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
+                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
+            }
+        }
+
 
 
         Invoice_entity invoice =
@@ -457,6 +537,32 @@ public class InvoiceService {
 
         Long shopId =
                 shop.getId();
+
+        // -------------------------------------------------
+        // SUBSCRIPTION CHECK
+        // -------------------------------------------------
+        
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
+        
+        if (tier == null) {
+            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
+            shop.setSubscriptionTier(tier);
+            shop.setTrialEndsAt(now.plusDays(7));
+            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
+            // since we added default values it should be TRIAL.
+        }
+        
+        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
+            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
+                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
+            }
+        } else {
+            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
+                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
+            }
+        }
+
 
 
         Invoice_entity invoice =
@@ -496,14 +602,13 @@ public class InvoiceService {
                     item.getProduct();
 
 
-            Integer currentStock =
+            Double currentStock =
                     product.getStockQuantity();
 
 
             if (currentStock == null) {
 
-                currentStock =
-                        0;
+                currentStock = 0.0;
             }
 
 
@@ -575,7 +680,7 @@ public class InvoiceService {
         }
 
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
@@ -583,7 +688,7 @@ public class InvoiceService {
         }
 
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
@@ -591,7 +696,7 @@ public class InvoiceService {
         }
 
 
-        if (!user.getShop().isActive()) {
+        if (!shopContextResolver.resolveActiveShop(user).isActive()) {
 
             throw new RuntimeException(
                     "Shop is not active"
@@ -599,7 +704,7 @@ public class InvoiceService {
         }
 
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 
@@ -646,9 +751,13 @@ public class InvoiceService {
                                                 item.getUnitPrice()
                                         )
 
-                                        .totalPrice(
-                                                item.getTotalPrice()
-                                        )
+                                        .totalPrice(item.getTotalPrice())
+                                        .hsnCode(item.getProduct() != null ? item.getProduct().getHsnCode() : null)
+                                        .taxableAmount(item.getTaxableAmount())
+                                        .cgst(item.getCgst())
+                                        .sgst(item.getSgst())
+                                        .igst(item.getIgst())
+                                        .gstRate(item.getGstRate())
 
                                         .build()
 
@@ -657,78 +766,28 @@ public class InvoiceService {
 
 
         return InvoiceResponse_Dto.builder()
-
-                .id(
-                        invoice.getId()
-                )
-
-                .shopId(
-                        invoice.getShop()
-                                .getId()
-                )
-
-                .customerId(
-                        invoice.getCustomer()
-                                .getId()
-                )
-
-                .customerName(
-                        invoice.getCustomer()
-                                .getName()
-                )
-
-                .invoiceNumber(
-                        invoice.getInvoiceNumber()
-                )
-
-                .subtotal(
-                        invoice.getSubtotal()
-                )
-
-                .discountAmount(
-                        invoice.getDiscountAmount()
-                )
-
-                .totalAmount(
-                        invoice.getTotalAmount()
-                )
-
-                .status(
-                        invoice.getStatus()
-                )
-
-                .createdAt(
-                        invoice.getCreatedAt()
-                )
-
+                .id(invoice.getId())
+                .shopId(invoice.getShop().getId())
+                .customerId(invoice.getCustomer().getId())
+                .customerName(invoice.getCustomer().getName())
+                .customerWhatsapp(invoice.getCustomer().getWhatsappNumber())
+                .invoiceNumber(invoice.getInvoiceNumber())
+                .subtotal(invoice.getSubtotal())
+                .discountAmount(invoice.getDiscountAmount())
+                .totalAmount(invoice.getTotalAmount())
+                .taxableAmount(invoice.getTaxableAmount())
+                .cgstTotal(invoice.getCgstTotal())
+                .sgstTotal(invoice.getSgstTotal())
+                .igstTotal(invoice.getIgstTotal())
+                .isInterState(invoice.getIsInterState())
+                .status(invoice.getStatus())
+                .createdAt(invoice.getCreatedAt())
                 .items(items)
-
-                .billerId(
-                        invoice.getBiller()
-                                .getId()
-                )
-
-                .billerName(
-                        invoice.getBiller()
-                                .getName()
-                )
-
-                // -----------------------------------------
-                // WHATSAPP STATUS
-                // -----------------------------------------
-
-                .whatsappStatus(
-                        invoice.getWhatsappStatus()
-                )
-
-                .whatsappSentAt(
-                        invoice.getWhatsappSentAt()
-                )
-
-                .whatsappError(
-                        invoice.getWhatsappError()
-                )
-
+                .billerId(invoice.getBiller() != null ? invoice.getBiller().getId() : null)
+                .billerName(invoice.getBiller() != null ? invoice.getBiller().getName() : null)
+                .whatsappStatus(invoice.getWhatsappStatus())
+                .whatsappSentAt(invoice.getWhatsappSentAt())
+                .whatsappError(invoice.getWhatsappError())
                 .build();
     }
 }

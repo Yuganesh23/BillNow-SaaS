@@ -2,8 +2,11 @@ package com.example.Billing.product;
 
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.supplier.SupplierRepository;
+import com.example.Billing.supplier.Supplier_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -14,6 +17,8 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final SupplierRepository supplierRepository;
+    private final ShopContextResolver shopContextResolver;
 
 
     // =====================================================
@@ -54,6 +59,10 @@ public class ProductService {
                                         : 10
                         )
                         .attributes(request.getAttributes())
+                        .supplier(request.getSupplierId() != null ? supplierRepository.findByIdAndShopId(request.getSupplierId(), shopId).orElse(null) : null)
+                        .hsnCode(request.getHsnCode())
+                        .gstRate(request.getGstRate() != null ? request.getGstRate() : java.math.BigDecimal.ZERO)
+                        .taxType(request.getTaxType() != null ? request.getTaxType() : TaxType.NONE)
                         .active(true)
                         .build();
 
@@ -170,6 +179,10 @@ public class ProductService {
                         : product.getLowStockThreshold()
         );
         product.setAttributes(request.getAttributes());
+        product.setSupplier(request.getSupplierId() != null ? supplierRepository.findByIdAndShopId(request.getSupplierId(), shopId).orElse(null) : null);
+        product.setHsnCode(request.getHsnCode());
+        if (request.getGstRate() != null) product.setGstRate(request.getGstRate());
+        if (request.getTaxType() != null) product.setTaxType(request.getTaxType());
 
         Product_entity updatedProduct =
                 productRepository.save(product);
@@ -204,6 +217,7 @@ public class ProductService {
 
         // Soft delete
         product.setActive(false);
+        product.setSku(product.getSku() + "_deleted_" + System.currentTimeMillis());
 
         productRepository.save(product);
     }
@@ -255,21 +269,21 @@ public class ProductService {
             );
         }
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
             );
         }
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
             );
         }
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 
@@ -297,8 +311,13 @@ public class ProductService {
                 .sellingPrice(product.getSellingPrice())
                 .stockQuantity(product.getStockQuantity())
                 .lowStockThreshold(product.getLowStockThreshold())
+                .supplierId(product.getSupplier() != null ? product.getSupplier().getId() : null)
+                .supplierName(product.getSupplier() != null ? product.getSupplier().getBusinessName() : null)
                 .attributes(product.getAttributes())
                 .active(product.isActive())
+                .hsnCode(product.getHsnCode())
+                .gstRate(product.getGstRate())
+                .taxType(product.getTaxType())
                 .build();
     }
 }

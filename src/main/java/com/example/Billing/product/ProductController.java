@@ -23,7 +23,7 @@ public class ProductController {
     // CREATE PRODUCT
     // POST /api/products
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @PostMapping
     public ResponseEntity<ProductResponse_Dto> createProduct(
             Authentication authentication,
@@ -45,7 +45,7 @@ public class ProductController {
     // GET ALL PRODUCTS
     // GET /api/products
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping
     public ResponseEntity<List<ProductResponse_Dto>> getAllProducts(
             Authentication authentication
@@ -83,7 +83,7 @@ public class ProductController {
     // GET PRODUCT BY ID
     // GET /api/products/{productId}
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/{productId}")
     public ResponseEntity<ProductResponse_Dto> getProduct(
             Authentication authentication,
@@ -107,7 +107,7 @@ public class ProductController {
     // UPDATE PRODUCT
     // PUT /api/products/{productId}
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @PutMapping("/{productId}")
     public ResponseEntity<ProductResponse_Dto> updateProduct(
             Authentication authentication,
@@ -133,7 +133,7 @@ public class ProductController {
     // DELETE PRODUCT
     // DELETE /api/products/{productId}
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @DeleteMapping("/{productId}")
     public ResponseEntity<Void> deleteProduct(
             Authentication authentication,
@@ -156,7 +156,7 @@ public class ProductController {
     // RESTORE PRODUCT
     // PUT /api/products/{productId}/restore
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @PutMapping("/{productId}/restore")
     public ResponseEntity<ProductResponse_Dto> restoreProduct(
             Authentication authentication,

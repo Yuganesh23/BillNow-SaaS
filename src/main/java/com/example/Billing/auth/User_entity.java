@@ -2,6 +2,7 @@ package com.example.Billing.auth;
 
 import com.example.Billing.shop.Shop_entity;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 @Entity
@@ -30,8 +31,12 @@ public class User_entity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "mobile_number", length = 20)
+    private String mobileNumber;
+
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
 
@@ -46,6 +51,7 @@ public class User_entity {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "shop_id",nullable = true)
+    @JsonIgnore
     private Shop_entity shop;
 
 }

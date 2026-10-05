@@ -13,6 +13,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class WhatsAppService {
 
     private final InvoiceRepository invoiceRepository;
+    private final ShopContextResolver shopContextResolver;
 
     private final InvoicePdfService invoicePdfService;
 
@@ -77,8 +79,8 @@ public class WhatsAppService {
         // VALIDATE SHOP
         // -------------------------------------------------
 
-        if (user.getShop() == null ||
-                user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null ||
+                shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "User is not associated with a valid shop"
@@ -87,7 +89,7 @@ public class WhatsAppService {
 
 
         Long shopId =
-                user.getShop().getId();
+                shopContextResolver.resolveActiveShop(user).getId();
 
 
         // -------------------------------------------------

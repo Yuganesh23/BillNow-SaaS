@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #4FB28F;
+  --color-primary-hover: #3D9B7A;
+  --color-primary-active: #328267;
+  --color-bg-page: #EBF0EA;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-secondary: #F2F6F3;
+  --color-text-main: #515654;
+  --color-text-heading: #26302D;
+  --color-text-secondary: #737A77;
+  --color-border: #D5DCD8;
+  --color-warning: #F2B143;
+  --color-warning-bg: #FFF5DD;
+  --color-success: #4FB28F;
+  --color-success-bg: #E8F6F0;
+  --color-error: #D95C5C;
+  --color-error-bg: #FCEAEA;
+  --color-info: #5B8DEF;
+  --color-info-bg: #EEF4FF;
+
+  /* Font overrides */
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Map existing utility classes (slate, indigo, etc.) to new palette */
+  --color-indigo-50: var(--color-success-bg);
+  --color-indigo-100: var(--color-success-bg);
+  --color-indigo-500: var(--color-primary);
+  --color-indigo-600: var(--color-primary);
+  --color-indigo-700: var(--color-primary-hover);
+  --color-indigo-800: var(--color-primary-active);
+  --color-indigo-900: var(--color-primary-active);
+  
+  --color-slate-50: var(--color-bg-page);
+  --color-slate-100: var(--color-bg-secondary);
+  --color-slate-200: var(--color-border);
+  --color-slate-300: var(--color-border);
+  --color-slate-400: #A7AEAB;
+  --color-slate-500: var(--color-text-secondary);
+  --color-slate-600: var(--color-text-main);
+  --color-slate-700: var(--color-text-main);
+  --color-slate-800: var(--color-text-heading);
+  --color-slate-900: var(--color-text-heading);
+  
+  --color-red-50: var(--color-error-bg);
+  --color-red-100: var(--color-error-bg);
+  --color-red-500: var(--color-error);
+  --color-red-600: var(--color-error);
+  --color-red-800: var(--color-error);
+  
+  --color-amber-50: var(--color-warning-bg);
+  --color-amber-100: var(--color-warning-bg);
+  --color-amber-500: var(--color-warning);
+  --color-amber-600: var(--color-warning);
+  --color-amber-800: var(--color-warning);
+  
+  --color-green-50: var(--color-success-bg);
+  --color-green-100: var(--color-success-bg);
+  --color-green-500: var(--color-success);
+  --color-green-600: var(--color-success);
+  --color-green-800: var(--color-primary-active);
+}
+
+body {
+  background-color: var(--color-bg-page);
+  color: var(--color-text-main);
+  font-family: var(--font-sans);
+}

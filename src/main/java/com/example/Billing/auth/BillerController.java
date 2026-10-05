@@ -44,6 +44,27 @@ public class BillerController {
     // =========================
 
     @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PutMapping("/{id}")
+    public ResponseEntity<BillerResponse_Dto> updateBiller(
+            @PathVariable Long id,
+            @Valid @RequestBody BillerRequest_Dto request,
+            Authentication authentication
+    ) {
+
+        User_entity owner =
+                (User_entity) authentication.getPrincipal();
+
+        BillerResponse_Dto response =
+                billerService.updateBiller(owner, id, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // =========================
+    // GET BILLERS
+    // =========================
+
+    @PreAuthorize("hasRole('SHOP_OWNER')")
     @GetMapping
     public ResponseEntity<List<BillerResponse_Dto>> getBillers(
             Authentication authentication

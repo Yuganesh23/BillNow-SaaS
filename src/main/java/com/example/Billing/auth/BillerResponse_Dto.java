@@ -1,6 +1,7 @@
 package com.example.Billing.auth;
 
 import lombok.*;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -16,8 +17,14 @@ public class BillerResponse_Dto {
     private String name;
 
     private String email;
+    private String mobileNumber;
 
     private String role;
 
     private boolean active;
+
+    private long totalInvoices;
+    
+    private BigDecimal totalSales;
 }
+

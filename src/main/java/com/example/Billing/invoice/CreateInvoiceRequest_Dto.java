@@ -1,10 +1,12 @@
 package com.example.Billing.invoice;
 
+import java.math.BigDecimal;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-import java.math.BigDecimal;
+
 import java.util.List;
 
 @Getter
@@ -21,4 +23,12 @@ public class CreateInvoiceRequest_Dto {
 
     @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal discountAmount;
+
+    private String paymentMethod;
+    
+    private BigDecimal taxableAmount;
+    private BigDecimal cgstTotal;
+    private BigDecimal sgstTotal;
+    private BigDecimal igstTotal;
+    private Boolean isInterState;
 }

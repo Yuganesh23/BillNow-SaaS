@@ -1,7 +1,10 @@
 package com.example.Billing.product;
-import lombok.*;
 
 import java.math.BigDecimal;
+import lombok.*;
+import com.example.Billing.product.TaxType;
+
+
 
 @Getter
 @Setter
@@ -25,11 +28,17 @@ public class ProductResponse_Dto {
 
     private BigDecimal sellingPrice;
 
-    private Integer stockQuantity;
+    private Double stockQuantity;
 
     private String attributes;
 
     private boolean active;
 
-    private Integer lowStockThreshold;
+    private Double lowStockThreshold;
+    private Long supplierId;
+    private String supplierName;
+    private String hsnCode;
+    private BigDecimal gstRate;
+    private TaxType taxType;
 }
+

@@ -6,6 +6,7 @@ import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final ShopContextResolver shopContextResolver;
     private final ProductRepository productRepository;
 
 
@@ -56,7 +58,7 @@ public class InventoryService {
         // VALIDATE QUANTITY
         // =================================================
 
-        Integer quantity =
+        Double quantity =
                 request.getQuantity();
 
         if (quantity == null ||
@@ -72,13 +74,13 @@ public class InventoryService {
         // CURRENT STOCK
         // =================================================
 
-        Integer currentStock =
+        Double currentStock =
                 product.getStockQuantity();
 
 
         if (currentStock == null) {
 
-            currentStock = 0;
+            currentStock = 0.0;
         }
 
 
@@ -86,7 +88,7 @@ public class InventoryService {
         // CALCULATE NEW STOCK
         // =================================================
 
-        int newStock =
+        Double newStock =
                 currentStock + quantity;
 
 
@@ -319,7 +321,7 @@ public class InventoryService {
         }
 
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
@@ -327,7 +329,7 @@ public class InventoryService {
         }
 
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
@@ -335,7 +337,7 @@ public class InventoryService {
         }
 
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 
@@ -347,13 +349,13 @@ public class InventoryService {
             Product_entity product
     ) {
 
-        Integer stock =
+        Double stock =
                 product.getStockQuantity();
 
 
         if (stock == null) {
 
-            stock = 0;
+            stock = 0.0;
         }
 
 

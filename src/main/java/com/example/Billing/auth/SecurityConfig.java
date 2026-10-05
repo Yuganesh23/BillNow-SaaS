@@ -22,15 +22,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
 
 
-    // =====================================================
-    // PASSWORD ENCODER
-    // =====================================================
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-
-        return new BCryptPasswordEncoder();
-    }
+    
 
 
     // =====================================================
@@ -58,9 +50,10 @@ public class SecurityConfig {
         http
 
                 // =========================================
-                // CSRF
+                // CORS & CSRF
                 // =========================================
 
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf ->
                         csrf.disable()
                 )
@@ -89,7 +82,8 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/auth/register",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/error"
                         ).permitAll()
 
 

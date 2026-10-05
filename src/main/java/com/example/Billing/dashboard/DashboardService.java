@@ -1,5 +1,7 @@
 package com.example.Billing.dashboard;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.customer.CustomerRepository;
 import com.example.Billing.invoice.InvoiceRepository;
@@ -12,9 +14,10 @@ import com.example.Billing.product.ProductRepository;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.List;
 public class DashboardService {
 
     private final InvoiceRepository invoiceRepository;
+    private final ShopContextResolver shopContextResolver;
 
     private final CustomerRepository customerRepository;
 
@@ -161,7 +165,7 @@ public class DashboardService {
         // =================================================
 
         long totalProducts =
-                productRepository.countByShopId(
+                productRepository.countByShopIdAndActiveTrue(
                         shopId
                 );
 
@@ -171,11 +175,7 @@ public class DashboardService {
         // =================================================
 
         long lowStockProducts =
-                productRepository
-                        .countByShopIdAndStockQuantityLessThanEqual(
-                                shopId,
-                                5
-                        );
+                productRepository.countLowStockProducts(shopId);
 
 
         // =================================================
@@ -330,7 +330,7 @@ public class DashboardService {
         }
 
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
@@ -338,7 +338,7 @@ public class DashboardService {
         }
 
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
@@ -346,7 +346,7 @@ public class DashboardService {
         }
 
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 

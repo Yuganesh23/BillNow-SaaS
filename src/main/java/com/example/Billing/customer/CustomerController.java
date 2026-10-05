@@ -124,7 +124,7 @@ public class CustomerController {
     // OWNER ONLY
     // =========================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @DeleteMapping("/{customerId}")
     public ResponseEntity<Void> deleteCustomer(
             Authentication authentication,

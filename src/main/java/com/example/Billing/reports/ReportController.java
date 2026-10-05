@@ -24,7 +24,7 @@ public class ReportController {
     // SALES REPORT
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/sales")
     public ResponseEntity<SalesReportResponse_Dto> getSalesReport(
 
@@ -61,7 +61,7 @@ public class ReportController {
     // =====================================================
     // PRODUCT SALES
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/products")
     public ResponseEntity<List<ProductSalesResponse_Dto>>
     getProductSales(
@@ -96,10 +96,22 @@ public class ReportController {
 
     // =====================================================
     // CUSTOMER SALES
+
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @GetMapping("/customers/new")
+    public ResponseEntity<List<CustomerSalesResponse_Dto>> getNewCustomers(
+            org.springframework.security.core.Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestParam @jakarta.validation.constraints.NotNull @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @org.springframework.web.bind.annotation.RequestParam @jakarta.validation.constraints.NotNull @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to
+    ) {
+        com.example.Billing.auth.User_entity user = getAuthenticatedUser(authentication);
+        return ResponseEntity.ok(reportService.getNewCustomers(user, from, to));
+    }
+
     // =====================================================
 
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/customers")
     public ResponseEntity<List<CustomerSalesResponse_Dto>>
     getCustomerSales(
@@ -137,7 +149,7 @@ public class ReportController {
     // =====================================================
 
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/payments")
     public ResponseEntity<PaymentReportResponse_Dto>
     getPaymentReport(

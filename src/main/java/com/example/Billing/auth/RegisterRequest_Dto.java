@@ -53,4 +53,12 @@ public class RegisterRequest_Dto {
             message = "Password must contain at least 6 characters"
     )
     private String password;
+
+    @NotBlank(message = "Mobile number is required")
+    private String mobileNumber;
+
+    @NotBlank(message = "Address is required")
+    private String address;
+
+    private String logoBase64;
 }

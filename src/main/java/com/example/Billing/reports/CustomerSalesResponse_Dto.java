@@ -1,8 +1,10 @@
 package com.example.Billing.reports;
 
+import java.math.BigDecimal;
+
 import lombok.*;
 
-import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -16,6 +18,7 @@ public class CustomerSalesResponse_Dto {
     private String customerName;
 
     private String whatsappNumber;
+    private String address;
 
     private Long invoiceCount;
 

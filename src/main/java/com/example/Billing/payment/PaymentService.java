@@ -1,5 +1,7 @@
 package com.example.Billing.payment;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.invoice.InvoiceRepository;
 import com.example.Billing.invoice.InvoiceStatus;
@@ -7,9 +9,10 @@ import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ import java.math.BigDecimal;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final ShopContextResolver shopContextResolver;
     private final InvoiceRepository invoiceRepository;
 
 
@@ -277,7 +281,7 @@ public class PaymentService {
         // CHECK SHOP
         // -------------------------------------------------
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
@@ -289,7 +293,7 @@ public class PaymentService {
         // CHECK SHOP ID
         // -------------------------------------------------
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
@@ -297,7 +301,7 @@ public class PaymentService {
         }
 
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 
 

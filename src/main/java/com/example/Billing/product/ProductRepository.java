@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository
         extends JpaRepository<Product_entity, Long> {
@@ -31,12 +33,10 @@ public interface ProductRepository
 
 
     // Dashboard - total products
-    long countByShopId(Long shopId);
+    long countByShopIdAndActiveTrue(Long shopId);
 
 
     // Dashboard - products below/equal fixed threshold
-    long countByShopIdAndStockQuantityLessThanEqual(
-            Long shopId,
-            Integer stockQuantity
-    );
+    @Query("SELECT COUNT(p) FROM Product_entity p WHERE p.shop.id = :shopId AND p.active = true AND p.stockQuantity <= p.lowStockThreshold")
+    long countLowStockProducts(@Param("shopId") Long shopId);
 }

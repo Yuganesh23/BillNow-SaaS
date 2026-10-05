@@ -53,7 +53,7 @@ public class Inventory_entity {
     // =====================================================
 
     @Column(nullable = false)
-    private Integer quantity;
+    private Double quantity;
 
 
     // =====================================================
@@ -61,7 +61,7 @@ public class Inventory_entity {
     // =====================================================
 
     @Column(nullable = false)
-    private Integer stockBefore;
+    private Double stockBefore;
 
 
     // =====================================================
@@ -69,7 +69,7 @@ public class Inventory_entity {
     // =====================================================
 
     @Column(nullable = false)
-    private Integer stockAfter;
+    private Double stockAfter;
 
 
     // =====================================================

@@ -15,7 +15,7 @@ public class InventoryResponse_Dto {
 
     private String sku;
 
-    private Integer stockQuantity;
+    private Double stockQuantity;
 
     private Boolean lowStock;
 }

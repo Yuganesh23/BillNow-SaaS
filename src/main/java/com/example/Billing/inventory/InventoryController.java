@@ -21,7 +21,7 @@ public class InventoryController {
     // =====================================================
     // ADJUST STOCK
     // =====================================================
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @PostMapping("/adjust")
     public ResponseEntity<InventoryResponse_Dto>
     adjustStock(
@@ -53,7 +53,7 @@ public class InventoryController {
     // GET ALL INVENTORY
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping
     public ResponseEntity<List<InventoryResponse_Dto>>
     getInventory(
@@ -74,7 +74,7 @@ public class InventoryController {
     // GET PRODUCT INVENTORY
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/product/{productId}")
     public ResponseEntity<InventoryResponse_Dto>
     getProductInventory(
@@ -103,7 +103,7 @@ public class InventoryController {
     // GET LOW STOCK
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/low-stock")
     public ResponseEntity<List<InventoryResponse_Dto>>
     getLowStockProducts(
@@ -126,7 +126,7 @@ public class InventoryController {
     // GET ALL STOCK MOVEMENTS
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/movements")
     public ResponseEntity<List<StockMovementResponse_Dto>>
     getStockMovements(
@@ -149,7 +149,7 @@ public class InventoryController {
     // GET PRODUCT STOCK MOVEMENTS
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping("/product/{productId}/movements")
     public ResponseEntity<List<StockMovementResponse_Dto>>
     getProductStockMovements(

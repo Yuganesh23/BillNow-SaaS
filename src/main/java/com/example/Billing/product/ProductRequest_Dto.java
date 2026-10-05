@@ -1,9 +1,12 @@
 package com.example.Billing.product;
 
+import java.math.BigDecimal;
+
 import jakarta.validation.constraints.*;
 import lombok.*;
+import com.example.Billing.product.TaxType;
 
-import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -31,10 +34,15 @@ public class ProductRequest_Dto {
 
     @NotNull(message = "Stock quantity is required")
     @Min(value = 0, message = "Stock cannot be negative")
-    private Integer stockQuantity;
+    private Double stockQuantity;
 
     private String attributes;
 
     @Min(value = 0, message = "Low stock threshold cannot be negative")
-    private Integer lowStockThreshold;
+    private Double lowStockThreshold;
+    private Long supplierId;
+    
+    private String hsnCode;
+    private BigDecimal gstRate;
+    private TaxType taxType;
 }

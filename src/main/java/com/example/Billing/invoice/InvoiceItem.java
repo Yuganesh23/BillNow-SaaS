@@ -1,10 +1,12 @@
 package com.example.Billing.invoice;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.product.Product_entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
+
 
 @Entity
 @Table(name = "invoice_items")
@@ -28,10 +30,30 @@ public class InvoiceItem {
     private Product_entity product;
 
     @Column(nullable = false)
-    private Integer quantity;
+    private Double quantity;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+        @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal taxableAmount = BigDecimal.ZERO;
+
+    @Column(precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal gstRate = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cgst = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal sgst = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal igst = BigDecimal.ZERO;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;

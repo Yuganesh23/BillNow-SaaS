@@ -1,12 +1,15 @@
 package com.example.Billing.reports;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +20,7 @@ import java.util.List;
 public class ReportService {
 
     private final ReportRepository reportRepository;
+    private final ShopContextResolver shopContextResolver;
 
 
     // =====================================================
@@ -46,23 +50,56 @@ public class ReportService {
                         start,
                         end
                 );
-
+                
+        List<Object[]> costResult = 
+                reportRepository.getSalesCostAndItems(
+                        shop.getId(),
+                        start,
+                        end
+                );
 
         Object[] row = result.get(0);
-
 
         long totalInvoices =
                 ((Number) row[0]).longValue();
 
-        BigDecimal subtotal =
-                (BigDecimal) row[1];
+        java.math.BigDecimal subtotal = row[1] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[1] : (row[1] != null ? java.math.BigDecimal.valueOf(((Number) row[1]).doubleValue()) : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal totalDiscount = row[2] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[2] : (row[2] != null ? java.math.BigDecimal.valueOf(((Number) row[2]).doubleValue()) : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal totalSales = row[3] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[3] : (row[3] != null ? java.math.BigDecimal.valueOf(((Number) row[3]).doubleValue()) : java.math.BigDecimal.ZERO);
+                
+        java.math.BigDecimal totalCost = java.math.BigDecimal.ZERO;
+        Double totalItemsSold = 0.0;
+        
+        for (Object[] itemRow : costResult) {
+            Double qty = itemRow[0] != null ? ((Number) itemRow[0]).doubleValue() : 0.0;
+            java.math.BigDecimal purchasePrice = java.math.BigDecimal.ZERO;
+            if (itemRow[1] != null) {
+                if (itemRow[1] instanceof java.math.BigDecimal) {
+                    purchasePrice = (java.math.BigDecimal) itemRow[1];
+                } else if (itemRow[1] instanceof Number) {
+                    purchasePrice = java.math.BigDecimal.valueOf(((Number) itemRow[1]).doubleValue());
+                }
+            }
+            totalItemsSold += qty;
+            totalCost = totalCost.add(purchasePrice.multiply(java.math.BigDecimal.valueOf(qty)));
+        }
+                
+        java.math.BigDecimal totalProfit = totalSales.subtract(totalCost);
 
-        BigDecimal totalDiscount =
-                (BigDecimal) row[2];
-
-        BigDecimal totalSales =
-                (BigDecimal) row[3];
-
+        List<Object[]> highestRevResult = reportRepository.getHighestRevenueDay(shop.getId(), start, end, org.springframework.data.domain.PageRequest.of(0, 1));
+        String highestRevenueDate = null;
+        java.math.BigDecimal highestRevenueAmount = java.math.BigDecimal.ZERO;
+        if (!highestRevResult.isEmpty()) {
+            Object[] hrRow = highestRevResult.get(0);
+            highestRevenueDate = hrRow[0] != null ? hrRow[0].toString() : null;
+            if (hrRow[1] != null) {
+                if (hrRow[1] instanceof java.math.BigDecimal) {
+                    highestRevenueAmount = (java.math.BigDecimal) hrRow[1];
+                } else if (hrRow[1] instanceof Number) {
+                    highestRevenueAmount = java.math.BigDecimal.valueOf(((Number) hrRow[1]).doubleValue());
+                }
+            }
+        }
 
         return SalesReportResponse_Dto.builder()
                 .from(from)
@@ -71,11 +108,33 @@ public class ReportService {
                 .subtotal(subtotal)
                 .totalDiscount(totalDiscount)
                 .totalSales(totalSales)
+                .totalProfit(totalProfit)
+                .totalItemsSold(totalItemsSold)
+                .highestRevenueDate(highestRevenueDate)
+                .highestRevenueAmount(highestRevenueAmount)
                 .build();
     }
 
 
     // =====================================================
+    
+    public List<CustomerSalesResponse_Dto> getNewCustomers(User_entity user, LocalDate from, LocalDate to) {
+        com.example.Billing.shop.Shop_entity shop = getUserShop(user);
+        validateDates(from, to);
+        java.time.LocalDateTime start = from.atStartOfDay();
+        java.time.LocalDateTime end = to.plusDays(1).atStartOfDay();
+
+        List<CustomerSalesProjection> result = reportRepository.getNewCustomers(shop.getId(), start, end);
+        return result.stream().map(customer -> CustomerSalesResponse_Dto.builder()
+                .customerId(customer.getCustomerId())
+                .customerName(customer.getCustomerName())
+                .whatsappNumber(customer.getWhatsappNumber())
+                .address(customer.getAddress())
+                .invoiceCount(customer.getInvoiceCount())
+                .totalPurchase(customer.getTotalPurchase())
+                .build()).toList();
+    }
+
     // PRODUCT SALES
     // =====================================================
 
@@ -169,6 +228,9 @@ public class ReportService {
                                 .whatsappNumber(
                                         customer.getWhatsappNumber()
                                 )
+                                .address(
+                                        customer.getAddress()
+                                )
                                 .invoiceCount(
                                         customer.getInvoiceCount()
                                 )
@@ -213,27 +275,16 @@ public class ReportService {
         Object[] row = result.get(0);
 
 
-        BigDecimal cashAmount =
-                (BigDecimal) row[0];
-
-        BigDecimal upiAmount =
-                (BigDecimal) row[1];
-
-        BigDecimal cardAmount =
-                (BigDecimal) row[2];
-
-        BigDecimal otherAmount =
-                (BigDecimal) row[3];
-
-        BigDecimal totalAmount =
-                (BigDecimal) row[4];
-
+        java.math.BigDecimal cashAmount = row[0] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[0] : (row[0] != null ? java.math.BigDecimal.valueOf(((Number) row[0]).doubleValue()) : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal upiAmount = row[1] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[1] : (row[1] != null ? java.math.BigDecimal.valueOf(((Number) row[1]).doubleValue()) : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal cardAmount = row[2] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[2] : (row[2] != null ? java.math.BigDecimal.valueOf(((Number) row[2]).doubleValue()) : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal totalAmount = row[3] instanceof java.math.BigDecimal ? (java.math.BigDecimal) row[3] : (row[3] != null ? java.math.BigDecimal.valueOf(((Number) row[3]).doubleValue()) : java.math.BigDecimal.ZERO);
 
         return PaymentReportResponse_Dto.builder()
                 .cashAmount(cashAmount)
                 .upiAmount(upiAmount)
                 .cardAmount(cardAmount)
-                .otherAmount(otherAmount)
+                .otherAmount(java.math.BigDecimal.ZERO)
                 .totalAmount(totalAmount)
                 .build();
     }
@@ -281,7 +332,7 @@ public class ReportService {
         }
 
 
-        if (user.getShop() == null) {
+        if (shopContextResolver.resolveActiveShop(user) == null) {
 
             throw new RuntimeException(
                     "User is not assigned to a shop"
@@ -289,7 +340,7 @@ public class ReportService {
         }
 
 
-        if (user.getShop().getId() == null) {
+        if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
             throw new RuntimeException(
                     "Shop ID is missing"
@@ -297,6 +348,6 @@ public class ReportService {
         }
 
 
-        return user.getShop();
+        return shopContextResolver.resolveActiveShop(user);
     }
 }

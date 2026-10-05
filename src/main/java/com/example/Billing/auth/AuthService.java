@@ -15,6 +15,8 @@ public class AuthService {
     private final ShopRepository shopRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final com.example.Billing.notification.EmailService emailService;
+    private final java.util.Map<String, String> otpStorage = new java.util.concurrent.ConcurrentHashMap<>();
 
 
     // =====================================================
@@ -283,4 +285,33 @@ public class AuthService {
 
                 .build();
     }
+
+    
+    public void forgotPassword(String email) {
+        User_entity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Generate 6 digit OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        otpStorage.put(email, otp);
+        
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    public void resetPassword(ResetPasswordRequest_Dto request) {
+        User_entity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found with this email"));
+                
+        // In this upgraded version, we verify OTP instead of mobile number.
+        // We will assume `request.getMobileNumber()` is now actually passing the OTP for simplicity
+        String expectedOtp = otpStorage.get(request.getEmail());
+        if (expectedOtp == null || !expectedOtp.equals(request.getMobileNumber())) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+        
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        otpStorage.remove(request.getEmail());
+    }
+
 }

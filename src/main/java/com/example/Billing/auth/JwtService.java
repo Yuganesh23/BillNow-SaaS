@@ -4,13 +4,17 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
+import com.example.Billing.config.ShopContextResolver;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
+@lombok.RequiredArgsConstructor
 public class JwtService {
+
+    private final ShopContextResolver shopContextResolver;
 
     private static final String SECRET_KEY =
             "SmartBillSecretKeyForJwtAuthentication2026SecureKey";
@@ -32,8 +36,8 @@ public class JwtService {
                 .claim("role", user.getRole())
                 .claim(
                         "shopId",
-                        user.getShop() != null
-                                ? user.getShop().getId()
+                        shopContextResolver.resolveActiveShop(user) != null
+                                ? shopContextResolver.resolveActiveShop(user).getId()
                                 : null
                 )
                 .issuedAt(new Date())

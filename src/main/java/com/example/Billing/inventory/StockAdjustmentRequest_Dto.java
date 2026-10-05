@@ -16,7 +16,7 @@ public class StockAdjustmentRequest_Dto {
 
 
     @NotNull(message = "Quantity is required")
-    private Integer quantity;
+    private Double quantity;
 
 
     @Size(max = 500, message = "Reason cannot exceed 500 characters")

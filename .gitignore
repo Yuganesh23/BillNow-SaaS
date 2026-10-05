@@ -39,3 +39,7 @@ application-local.properties
 ### OS ###
 .DS_Store
 Thumbs.d
+
+*.db
+*.sqlite
+*.db-journal

@@ -1,5 +1,7 @@
 package com.example.Billing.invoice;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.customer.Customer_entity;
 import com.example.Billing.invoice.whatsapp.WhatsAppStatus;
@@ -7,7 +9,7 @@ import com.example.Billing.shop.Shop_entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -119,6 +121,26 @@ public class Invoice_entity {
             scale = 2
     )
     private BigDecimal totalAmount;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal taxableAmount = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cgstTotal = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal sgstTotal = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal igstTotal = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isInterState = false;
 
 
     // =====================================================

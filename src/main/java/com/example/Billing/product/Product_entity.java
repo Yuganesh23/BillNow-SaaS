@@ -1,10 +1,15 @@
 package com.example.Billing.product;
 
+import java.math.BigDecimal;
+
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.supplier.Supplier_entity;
+
 import jakarta.persistence.*;
 import lombok.*;
+import com.example.Billing.product.TaxType;
 
-import java.math.BigDecimal;
+
 
 @Entity
 @Table(name = "products")
@@ -23,6 +28,11 @@ public class Product_entity {
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop_entity shop;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier_entity supplier;
+
+
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -38,11 +48,23 @@ public class Product_entity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal purchasePrice;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+        @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal sellingPrice;
 
+    @Column(length = 20)
+    private String hsnCode;
+
+    @Column(precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal gstRate = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Integer stockQuantity;
+    @Builder.Default
+    private TaxType taxType = TaxType.NONE;
+
+    @Column(nullable = false)
+    private Double stockQuantity;
 
     @Column(columnDefinition = "TEXT")
     private String attributes;
@@ -53,5 +75,5 @@ public class Product_entity {
 
     @Builder.Default
     @Column(name = "low_stock_threshold", nullable = false)
-    private Integer lowStockThreshold = 10;
+    private Double lowStockThreshold = 10.0;
 }

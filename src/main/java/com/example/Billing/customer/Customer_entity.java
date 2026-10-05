@@ -40,4 +40,19 @@ public class Customer_entity {
 
     @Column(length = 500)
     private String address;
+
+    @Column(length = 15)
+    private String gstin;
+
+    @Column(length = 100)
+    private String state;
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) createdAt = java.time.LocalDateTime.now();
+    }
+
 }

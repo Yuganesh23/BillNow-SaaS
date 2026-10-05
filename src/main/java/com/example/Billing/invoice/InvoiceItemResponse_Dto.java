@@ -1,8 +1,7 @@
 package com.example.Billing.invoice;
 
-import lombok.*;
-
 import java.math.BigDecimal;
+import lombok.*;
 
 @Getter
 @Setter
@@ -11,16 +10,16 @@ import java.math.BigDecimal;
 @Builder
 public class InvoiceItemResponse_Dto {
     private Long id;
-
     private Long productId;
-
     private String productName;
-
     private String sku;
-
-    private Integer quantity;
-
+    private Double quantity;
     private BigDecimal unitPrice;
-
     private BigDecimal totalPrice;
+    private String hsnCode;
+    private BigDecimal taxableAmount;
+    private BigDecimal cgst;
+    private BigDecimal sgst;
+    private BigDecimal igst;
+    private BigDecimal gstRate;
 }

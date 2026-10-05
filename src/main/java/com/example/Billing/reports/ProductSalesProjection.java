@@ -2,6 +2,8 @@ package com.example.Billing.reports;
 
 import java.math.BigDecimal;
 
+
+
 public interface ProductSalesProjection {
 
     Long getProductId();
@@ -10,7 +12,7 @@ public interface ProductSalesProjection {
 
     String getSku();
 
-    Long getQuantitySold();
+    Double getQuantitySold();
 
     BigDecimal getRevenue();
 }

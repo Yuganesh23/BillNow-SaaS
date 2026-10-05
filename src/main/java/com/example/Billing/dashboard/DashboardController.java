@@ -19,7 +19,7 @@ public class DashboardController {
     // GET DASHBOARD
     // =====================================================
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
     @GetMapping
     public ResponseEntity<DashboardResponse_Dto> getDashboard(
             Authentication authentication

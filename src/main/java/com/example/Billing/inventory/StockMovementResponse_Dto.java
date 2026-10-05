@@ -22,11 +22,11 @@ public class StockMovementResponse_Dto {
 
     private StockMovementType movementType;
 
-    private Integer quantity;
+    private Double quantity;
 
-    private Integer stockBefore;
+    private Double stockBefore;
 
-    private Integer stockAfter;
+    private Double stockAfter;
 
     private String reason;
 

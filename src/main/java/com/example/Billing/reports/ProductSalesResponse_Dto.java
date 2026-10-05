@@ -1,8 +1,10 @@
 package com.example.Billing.reports;
 
+import java.math.BigDecimal;
+
 import lombok.*;
 
-import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -17,7 +19,7 @@ public class ProductSalesResponse_Dto {
 
     private String sku;
 
-    private Long quantitySold;
+    private Double quantitySold;
 
     private BigDecimal revenue;
 }
