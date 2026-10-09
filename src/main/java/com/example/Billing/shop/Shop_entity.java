@@ -64,6 +64,13 @@ public class Shop_entity {
     
     private java.time.LocalDateTime subscriptionEndsAt;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer lastInvoiceNumber = 0;
+
+    @Version
+    private Long version;
+
 
     @Builder.Default
     @Column(nullable = false)

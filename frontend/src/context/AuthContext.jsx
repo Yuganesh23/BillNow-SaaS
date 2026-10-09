@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  // Token managed securely via HttpOnly cookies
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,10 +26,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await loginApi({ email, password });
-      const { token, ...userData } = response.data || response; // Handle both mock and real response
-      setToken(token);
+      const { token, ...userData } = response.data || response;
       setUser(userData);
-      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       return true;
     } catch (error) {
@@ -40,19 +38,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setToken(null);
+  const logout = async () => {
+    try {
+      await axiosClient.post('/auth/logout');
+    } catch(e) {
+      console.error('Logout API failed', e);
+    }
     setUser(null);
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
   };
 
   const value = {
     user,
-    token,
     login,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: !!user,
     loading
   };
 

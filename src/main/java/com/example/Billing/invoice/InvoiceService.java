@@ -23,6 +23,8 @@ import java.util.List;
 @Transactional
 public class InvoiceService {
 
+    private final com.example.Billing.shop.ShopRepository shopRepository;
+
     private final com.example.Billing.notification.EmailService emailService;
     private final com.example.Billing.invoice.whatsapp.WhatsAppService whatsAppService;
 
@@ -184,180 +186,81 @@ public class InvoiceService {
         // PROCESS ITEMS
         // =================================================
 
-        for (InvoiceItemRequest_Dto itemRequest :
-                request.getItems()) {
+        BigDecimal totalTaxableAmount = BigDecimal.ZERO;
+        BigDecimal totalCgst = BigDecimal.ZERO;
+        BigDecimal totalSgst = BigDecimal.ZERO;
+        BigDecimal totalIgst = BigDecimal.ZERO;
 
-
-            // ---------------------------------------------
-            // VALIDATE ITEM
-            // ---------------------------------------------
-
-            if (itemRequest == null) {
-
-                throw new RuntimeException(
-                        "Invoice item cannot be null"
-                );
+        for (InvoiceItemRequest_Dto itemRequest : request.getItems()) {
+            if (itemRequest == null || itemRequest.getProductId() == null) {
+                throw new RuntimeException("Product ID is required");
+            }
+            Double requestedQuantity = itemRequest.getQuantity();
+            if (requestedQuantity == null || requestedQuantity <= 0.0) {
+                throw new RuntimeException("Quantity must be greater than zero");
             }
 
-
-            if (itemRequest.getProductId() == null) {
-
-                throw new RuntimeException(
-                        "Product ID is required"
-                );
-            }
-
-
-            Double requestedQuantity =
-                    itemRequest.getQuantity();
-
-
-            if (requestedQuantity == null ||
-                    requestedQuantity <= 0.0) {
-
-                throw new RuntimeException(
-                        "Quantity must be greater than zero"
-                );
-            }
-
-
-            // ---------------------------------------------
-            // GET PRODUCT
-            // ---------------------------------------------
-
-            Product_entity product =
-                    productRepository
-                            .findByIdAndShopId(
-                                    itemRequest.getProductId(),
-                                    shopId
-                            )
-                            .orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Product not found: "
-                                                    + itemRequest
-                                                    .getProductId()
-                                    )
-                            );
-
-
-            // ---------------------------------------------
-            // CHECK ACTIVE
-            // ---------------------------------------------
+            Product_entity product = productRepository.findByIdAndShopId(itemRequest.getProductId(), shopId)
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
 
             if (!product.isActive()) {
-
-                throw new RuntimeException(
-                        "Product is inactive: "
-                                + product.getName()
-                );
+                throw new RuntimeException("Product is inactive: " + product.getName());
             }
 
+            BigDecimal unitPrice = product.getSellingPrice();
+            BigDecimal enteredLineTotal = unitPrice.multiply(BigDecimal.valueOf(requestedQuantity));
+            
+            BigDecimal itemBaseAmount = enteredLineTotal;
+            BigDecimal itemTaxAmount = BigDecimal.ZERO;
 
-            // ---------------------------------------------
-            // CHECK STOCK
-            // ---------------------------------------------
-
-            Double availableStock =
-                    product.getStockQuantity();
-
-
-            if (availableStock == null) {
-
-                throw new RuntimeException(
-                        "Stock quantity is missing for product: "
-                                + product.getName()
-                );
+            if (product.getGstRate() != null && product.getGstRate().compareTo(BigDecimal.ZERO) > 0) {
+                if (product.getTaxType() == com.example.Billing.product.TaxType.INCLUSIVE) {
+                    BigDecimal divisor = BigDecimal.ONE.add(product.getGstRate().divide(new BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP));
+                    itemBaseAmount = enteredLineTotal.divide(divisor, 2, java.math.RoundingMode.HALF_UP);
+                    itemTaxAmount = enteredLineTotal.subtract(itemBaseAmount);
+                } else if (product.getTaxType() == com.example.Billing.product.TaxType.EXCLUSIVE) {
+                    itemTaxAmount = enteredLineTotal.multiply(product.getGstRate()).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+                    itemBaseAmount = enteredLineTotal;
+                }
             }
 
+            BigDecimal itemCgst = BigDecimal.ZERO;
+            BigDecimal itemSgst = BigDecimal.ZERO;
+            BigDecimal itemIgst = BigDecimal.ZERO;
 
-            if (availableStock <
-                    requestedQuantity) {
-
-                throw new RuntimeException(
-                        "Insufficient stock for product: "
-                                + product.getName()
-                                + ". Available: "
-                                + availableStock
-                );
+            if (request.getIsInterState() != null && request.getIsInterState()) {
+                itemIgst = itemTaxAmount;
+            } else {
+                itemCgst = itemTaxAmount.divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP);
+                itemSgst = itemTaxAmount.subtract(itemCgst);
             }
 
+            totalTaxableAmount = totalTaxableAmount.add(itemBaseAmount);
+            totalCgst = totalCgst.add(itemCgst);
+            totalSgst = totalSgst.add(itemSgst);
+            totalIgst = totalIgst.add(itemIgst);
 
-            // ---------------------------------------------
-            // UNIT PRICE
-            // ---------------------------------------------
+            InvoiceItem invoiceItem = InvoiceItem.builder()
+                    .invoice(invoice)
+                    .product(product)
+                    .quantity(requestedQuantity)
+                    .unitPrice(unitPrice)
+                    .totalPrice(enteredLineTotal)
+                    .taxableAmount(itemBaseAmount)
+                    .cgst(itemCgst)
+                    .sgst(itemSgst)
+                    .igst(itemIgst)
+                    .gstRate(product.getGstRate() != null ? product.getGstRate() : BigDecimal.ZERO)
+                    .build();
 
-            BigDecimal unitPrice =
-                    product.getSellingPrice();
+            invoice.getItems().add(invoiceItem);
+            subtotal = subtotal.add(itemBaseAmount).add(itemTaxAmount);
 
-
-            if (unitPrice == null) {
-
-                throw new RuntimeException(
-                        "Selling price is missing for product: "
-                                + product.getName()
-                );
+            int updated = productRepository.reduceStock(product.getId(), shopId, requestedQuantity);
+            if (updated == 0) {
+                throw new RuntimeException("Insufficient stock or concurrency conflict for product: " + product.getName());
             }
-
-
-            // ---------------------------------------------
-            // TOTAL PRICE
-            // ---------------------------------------------
-
-            BigDecimal totalPrice =
-                    unitPrice.multiply(
-                            BigDecimal.valueOf(
-                                    requestedQuantity
-                            )
-                    );
-
-
-            // ---------------------------------------------
-            // CREATE INVOICE ITEM
-            // ---------------------------------------------
-
-            InvoiceItem invoiceItem =
-                    InvoiceItem.builder()
-                            .invoice(invoice)
-                            .product(product)
-                            .quantity(requestedQuantity)
-                            .unitPrice(unitPrice)
-                            .totalPrice(totalPrice)
-                            .taxableAmount(itemRequest.getTaxableAmount() != null ? itemRequest.getTaxableAmount() : BigDecimal.ZERO)
-                            .cgst(itemRequest.getCgst() != null ? itemRequest.getCgst() : BigDecimal.ZERO)
-                            .sgst(itemRequest.getSgst() != null ? itemRequest.getSgst() : BigDecimal.ZERO)
-                            .igst(itemRequest.getIgst() != null ? itemRequest.getIgst() : BigDecimal.ZERO)
-                            .gstRate(itemRequest.getGstRate() != null ? itemRequest.getGstRate() : BigDecimal.ZERO)
-                            .build();
-
-
-            invoice.getItems()
-                    .add(invoiceItem);
-
-
-            // ---------------------------------------------
-            // UPDATE SUBTOTAL
-            // ---------------------------------------------
-
-            subtotal =
-                    subtotal.add(
-                            totalPrice
-                    );
-
-
-            // ---------------------------------------------
-            // REDUCE STOCK
-            // ---------------------------------------------
-
-            product.setStockQuantity(
-                    availableStock
-                            - requestedQuantity
-            );
-
-            productRepository.save(
-                    product
-            );
         }
-
 
         // =================================================
         // VALIDATE DISCOUNT
@@ -383,13 +286,12 @@ public class InvoiceService {
                 );
 
 
-        invoice.setSubtotal(subtotal);
-        invoice.setTotalAmount(totalAmount);
-        
-        invoice.setTaxableAmount(request.getTaxableAmount() != null ? request.getTaxableAmount() : BigDecimal.ZERO);
-        invoice.setCgstTotal(request.getCgstTotal() != null ? request.getCgstTotal() : BigDecimal.ZERO);
-        invoice.setSgstTotal(request.getSgstTotal() != null ? request.getSgstTotal() : BigDecimal.ZERO);
-        invoice.setIgstTotal(request.getIgstTotal() != null ? request.getIgstTotal() : BigDecimal.ZERO);
+        invoice.setSubtotal(totalTaxableAmount);
+        invoice.setTaxableAmount(totalTaxableAmount);
+        invoice.setCgstTotal(totalCgst);
+        invoice.setSgstTotal(totalSgst);
+        invoice.setIgstTotal(totalIgst);
+        invoice.setTotalAmount(totalTaxableAmount.add(totalCgst).add(totalSgst).add(totalIgst).subtract(discount));
         invoice.setIsInterState(request.getIsInterState() != null ? request.getIsInterState() : false);
 
 

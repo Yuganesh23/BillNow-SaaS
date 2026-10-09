@@ -16,15 +16,15 @@ public class JwtService {
 
     private final ShopContextResolver shopContextResolver;
 
-    private static final String SECRET_KEY =
-            "SmartBillSecretKeyForJwtAuthentication2026SecureKey";
+    @org.springframework.beans.factory.annotation.Value("${jwt.secret:SmartBillSecretKeyForJwtAuthentication2026SecureKey}")
+    private String secretKey;
 
     private static final long EXPIRATION_TIME =
             1000 * 60 * 60; // 1 hour
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
-                SECRET_KEY.getBytes(StandardCharsets.UTF_8)
+                secretKey.getBytes(StandardCharsets.UTF_8)
         );
     }
 

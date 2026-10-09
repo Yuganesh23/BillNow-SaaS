@@ -39,4 +39,12 @@ public interface ProductRepository
     // Dashboard - products below/equal fixed threshold
     @Query("SELECT COUNT(p) FROM Product_entity p WHERE p.shop.id = :shopId AND p.active = true AND p.stockQuantity <= p.lowStockThreshold")
     long countLowStockProducts(@Param("shopId") Long shopId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Product_entity p SET p.stockQuantity = p.stockQuantity - :qty WHERE p.id = :id AND p.shop.id = :shopId AND p.stockQuantity >= :qty")
+    int reduceStock(@Param("id") Long id, @Param("shopId") Long shopId, @Param("qty") Double qty);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Product_entity p SET p.stockQuantity = p.stockQuantity + :qty WHERE p.id = :id AND p.shop.id = :shopId")
+    int increaseStock(@Param("id") Long id, @Param("shopId") Long shopId, @Param("qty") Double qty);
 }

@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -61,34 +62,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // GET AUTHORIZATION HEADER
         // =================================================
 
-        String authHeader =
-                request.getHeader("Authorization");
+        String token = null;
 
-
-        // =================================================
-        // NO JWT
-        // =================================================
-
-        if (authHeader == null ||
-                !authHeader.startsWith("Bearer ")) {
-
-            System.out.println("JWT: No token");
-
-            filterChain.doFilter(
-                    request,
-                    response
-            );
-
-            return;
+        // 1. Try from Cookie
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("jwt".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
         }
 
+        // 2. Fallback to Authorization Header
+        if (token == null || token.isBlank()) {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
+            }
+        }
 
-        // =================================================
-        // EXTRACT TOKEN
-        // =================================================
-
-        String token =
-                authHeader.substring(7);
+        if (token == null || token.isBlank()) {
+            System.out.println("JWT: No token found in cookies or header");
+            filterChain.doFilter(request, response);
+            return;
+        }
 
 
         try {
