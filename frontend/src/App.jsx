@@ -1,33 +1,32 @@
 ﻿import React from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
-import Suppliers from './pages/Suppliers';
-import SupplierForm from './pages/SupplierForm';
-import SupplierProfile from './pages/SupplierProfile';
-import Purchases from './pages/Purchases';
-import PurchaseForm from './pages/PurchaseForm';
-import PurchaseDetails from './pages/PurchaseDetails';
-
-// Pages
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import Dashboard from './pages/Dashboard';
-import Products from './pages/Products';
-import Customers from './pages/Customers';
-import CustomerDetail from './pages/CustomerDetail';
-import Invoices from './pages/Invoices';
-import CreateInvoice from './pages/CreateInvoice';
-import InvoiceDetails from './pages/InvoiceDetails';
-import Payments from './pages/Payments';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import Subscription from './pages/Subscription';
-import Register from './pages/Register';
-import Billers from './pages/Billers';
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/Login'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Products = lazy(() => import('./pages/Products'));
+const Customers = lazy(() => import('./pages/Customers'));
+const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const CreateInvoice = lazy(() => import('./pages/CreateInvoice'));
+const InvoiceDetails = lazy(() => import('./pages/InvoiceDetails'));
+const Payments = lazy(() => import('./pages/Payments'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Register = lazy(() => import('./pages/Register'));
+const Billers = lazy(() => import('./pages/Billers'));
+const Suppliers = lazy(() => import('./pages/Suppliers'));
+const SupplierForm = lazy(() => import('./pages/SupplierForm'));
+const SupplierProfile = lazy(() => import('./pages/SupplierProfile'));
+const Purchases = lazy(() => import('./pages/Purchases'));
+const PurchaseForm = lazy(() => import('./pages/PurchaseForm'));
+const PurchaseDetails = lazy(() => import('./pages/PurchaseDetails'));
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -45,6 +44,7 @@ function App() {
     <AuthProvider>
       <BranchProvider>
       <BrowserRouter>
+        <Suspense fallback={<div className="min-h-screen grid place-items-center text-slate-600">Loading BillNow…</div>}>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
@@ -82,6 +82,7 @@ function App() {
             </Route>
           </Route>
         </Routes>
+        </Suspense>
       </BrowserRouter>
       </BranchProvider>
     </AuthProvider>

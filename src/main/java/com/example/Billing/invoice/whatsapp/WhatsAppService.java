@@ -32,6 +32,7 @@ public class WhatsAppService {
     private final ShopWhatsAppConfigRepository configRepository;
 
     private final WhatsAppStatusService whatsappStatusService;
+    private final com.example.Billing.security.SecretStringCipher secretStringCipher;
 
 
     private final RestClient restClient =
@@ -184,7 +185,7 @@ public class WhatsAppService {
                 config.getPhoneNumberId();
 
         String accessToken =
-                config.getAccessToken();
+                secretStringCipher.decrypt(config.getAccessToken());
 
 
         if (phoneNumberId == null ||

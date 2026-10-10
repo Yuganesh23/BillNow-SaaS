@@ -19,8 +19,8 @@ public class JwtService {
     @org.springframework.beans.factory.annotation.Value("${jwt.secret:SmartBillSecretKeyForJwtAuthentication2026SecureKey}")
     private String secretKey;
 
-    private static final long EXPIRATION_TIME =
-            1000 * 60 * 60; // 1 hour
+    @org.springframework.beans.factory.annotation.Value("${jwt.access-token-minutes:15}")
+    private long accessTokenMinutes;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
@@ -31,7 +31,7 @@ public class JwtService {
     public String generateToken(User_entity user) {
 
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(user.getId().toString())
                 .claim("userId", user.getId())
                 .claim("role", user.getRole())
                 .claim(
@@ -42,22 +42,19 @@ public class JwtService {
                 )
                 .issuedAt(new Date())
                 .expiration(
-                        new Date(System.currentTimeMillis() + EXPIRATION_TIME)
+                        new Date(System.currentTimeMillis() + accessTokenMinutes * 60_000)
                 )
                 .signWith(getSigningKey())
                 .compact();
     }
 
     public String extractEmail(String token) {
-
-        return getClaims(token)
-                .getSubject();
+        return getClaims(token).get("email", String.class);
     }
 
     public Long extractUserId(String token) {
-
-        return getClaims(token)
-                .get("userId", Long.class);
+        Number userId = getClaims(token).get("userId", Number.class);
+        return userId == null ? null : userId.longValue();
     }
 
     public Long extractShopId(String token) {
@@ -89,5 +86,9 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public long getAccessTokenMinutes() {
+        return accessTokenMinutes;
     }
 }

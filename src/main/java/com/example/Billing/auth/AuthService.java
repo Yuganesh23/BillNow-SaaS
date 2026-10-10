@@ -2,10 +2,20 @@ package com.example.Billing.auth;
 
 import com.example.Billing.shop.ShopRepository;
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.common.AppException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.HexFormat;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +26,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final com.example.Billing.notification.EmailService emailService;
-    private final java.util.Map<String, String> otpStorage = new java.util.concurrent.ConcurrentHashMap<>();
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final Duration OTP_LIFETIME = Duration.ofMinutes(5);
+    private static final int MAX_OTP_ATTEMPTS = 5;
 
 
     // =====================================================
@@ -38,9 +53,7 @@ public class AuthService {
                 normalizedEmail
         )) {
 
-            throw new RuntimeException(
-                    "Email already registered"
-            );
+            throw new AppException(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "Email already registered");
         }
 
 
@@ -119,6 +132,10 @@ public class AuthService {
 
                         .active(
                                 true
+                        )
+
+                        .trialEndsAt(
+                                LocalDateTime.now().plusDays(7)
                         )
 
                         .owner(
@@ -208,15 +225,14 @@ public class AuthService {
         // FIND USER
         // =================================================
 
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
         User_entity user =
                 userRepository
                         .findByEmail(
-                                request.getEmail()
+                                normalizedEmail
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invalid email or password"
-                                )
+                                new AppException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid email or password")
                         );
 
 
@@ -226,9 +242,7 @@ public class AuthService {
 
         if (!user.isActive()) {
 
-            throw new RuntimeException(
-                    "User account is inactive"
-            );
+            throw new AppException(HttpStatus.FORBIDDEN, "ACCOUNT_INACTIVE", "User account is inactive");
         }
 
 
@@ -241,9 +255,7 @@ public class AuthService {
                 user.getPassword()
         )) {
 
-            throw new RuntimeException(
-                    "Invalid email or password"
-            );
+            throw new AppException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid email or password");
         }
 
 
@@ -305,31 +317,85 @@ public class AuthService {
     }
 
     
+    @Transactional
     public void forgotPassword(String email) {
-        User_entity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        // Generate 6 digit OTP
-        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
-        otpStorage.put(email, otp);
-        
-        emailService.sendOtpEmail(email, otp);
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        String normalizedEmail = email.trim().toLowerCase();
+        // Deliberately return the same response for unknown users to prevent account enumeration.
+        userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
+            passwordResetTokenRepository.findTopByUserIdAndConsumedAtIsNullOrderByCreatedAtDesc(user.getId())
+                    .ifPresent(previous -> {
+                        previous.setConsumedAt(Instant.now());
+                        passwordResetTokenRepository.save(previous);
+                    });
+            String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+            Instant now = Instant.now();
+            passwordResetTokenRepository.save(PasswordResetToken_entity.builder()
+                    .user(user)
+                    .codeHash(hashOtp(normalizedEmail, otp))
+                    .createdAt(now)
+                    .expiresAt(now.plus(OTP_LIFETIME))
+                    .build());
+            emailService.sendOtpEmail(normalizedEmail, otp);
+        });
     }
 
+    @Transactional
     public void resetPassword(ResetPasswordRequest_Dto request) {
-        User_entity user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with this email"));
-                
-        // In this upgraded version, we verify OTP instead of mobile number.
-        // We will assume `request.getMobileNumber()` is now actually passing the OTP for simplicity
-        String expectedOtp = otpStorage.get(request.getEmail());
-        if (expectedOtp == null || !expectedOtp.equals(request.getMobileNumber())) {
-            throw new RuntimeException("Invalid or expired OTP");
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        User_entity user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(this::invalidOtp);
+        PasswordResetToken_entity resetToken = passwordResetTokenRepository
+                .findTopByUserIdAndConsumedAtIsNullOrderByCreatedAtDesc(user.getId())
+                .orElseThrow(this::invalidOtp);
+        Instant now = Instant.now();
+        if (!resetToken.getExpiresAt().isAfter(now) || resetToken.getAttempts() >= MAX_OTP_ATTEMPTS) {
+            resetToken.setConsumedAt(now);
+            passwordResetTokenRepository.save(resetToken);
+            throw invalidOtp();
         }
-        
+        if (!MessageDigest.isEqual(
+                resetToken.getCodeHash().getBytes(StandardCharsets.UTF_8),
+                hashOtp(normalizedEmail, request.getOtp()).getBytes(StandardCharsets.UTF_8))) {
+            resetToken.setAttempts(resetToken.getAttempts() + 1);
+            passwordResetTokenRepository.save(resetToken);
+            throw invalidOtp();
+        }
+
+        resetToken.setConsumedAt(now);
+        passwordResetTokenRepository.save(resetToken);
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-        otpStorage.remove(request.getEmail());
+        refreshTokenRepository.findByUserIdAndRevokedAtIsNull(user.getId()).stream()
+                .forEach(token -> token.setRevokedAt(now));
+    }
+
+    public AuthResponse_Dto responseFor(User_entity user) {
+        Long shopId = user.getShop() == null ? null : user.getShop().getId();
+        return AuthResponse_Dto.builder()
+                .token(jwtService.generateToken(user))
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .shopId(shopId)
+                .build();
+    }
+
+    private AppException invalidOtp() {
+        return new AppException(HttpStatus.BAD_REQUEST, "INVALID_OTP", "Invalid or expired OTP");
+    }
+
+    private String hashOtp(String email, String otp) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest((email + ":" + otp).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to hash OTP", exception);
+        }
     }
 
 }

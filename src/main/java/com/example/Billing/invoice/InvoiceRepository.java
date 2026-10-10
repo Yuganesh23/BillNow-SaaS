@@ -17,6 +17,8 @@ public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> 
             Long shopId
     );
 
+    Optional<Invoice_entity> findByShopIdAndIdempotencyKey(Long shopId, String idempotencyKey);
+
     @Query("SELECT COUNT(i) FROM Invoice_entity i WHERE i.biller.id = :billerId")
     long countByBillerId(@Param("billerId") Long billerId);
 

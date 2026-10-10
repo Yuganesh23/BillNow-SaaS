@@ -5,7 +5,7 @@ import { useBranch } from '../context/BranchContext';
 import { Building2, Plus, Mail, Phone, User, Edit2, Trash2 } from 'lucide-react';
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { fetchBranches } = useBranch();
   
   const [userProfile, setUserProfile] = useState({ name: '', email: '', mobileNumber: '' });
@@ -16,7 +16,7 @@ export default function Settings() {
   const [showAddShop, setShowAddShop] = useState(false);
   const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
   const [editingShop, setEditingShop] = useState(null);
-  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', logoBase64: '', gstin: '', legalName: '', state: '' });
+  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', logoBase64: '', logoObjectKey: '', logoPreviewUrl: '', gstin: '', legalName: '', state: '' });
 
   useEffect(() => {
     fetchData();
@@ -46,18 +46,12 @@ export default function Settings() {
   const handleSaveUser = async () => {
     setSavingUser(true);
     try {
-      const emailChanged = userProfile.email !== user?.email;
       await axiosClient.put('/profile', { 
         userName: userProfile.name,
         userEmail: userProfile.email,
         userMobile: userProfile.mobileNumber
       });
       alert('Profile updated successfully!');
-      
-      if (emailChanged) {
-        alert(`You changed your login email. Sign in again using ${userProfile.email}.`);
-        await logout();
-      }
     } catch (e) {
       alert('Failed to update profile.');
     } finally {
@@ -74,6 +68,8 @@ export default function Settings() {
       mobileNumber: shop.mobileNumber || '',
       address: shop.address || '',
       logoBase64: shop.logoBase64 || '',
+      logoObjectKey: shop.logoObjectKey || '',
+      logoPreviewUrl: shop.logoBase64 || '',
       gstin: shop.gstin || '',
       legalName: shop.legalName || '',
       state: shop.state || ''
@@ -95,12 +91,27 @@ export default function Settings() {
     }
   };
 
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo must be smaller than 2 MB.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const { data } = await axiosClient.post('/storage/logo-upload', { contentType: file.type });
+      const upload = await fetch(data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!upload.ok) throw new Error('Storage upload failed');
+      setEditShopData(prev => ({ ...prev, logoObjectKey: data.objectKey, logoBase64: '', logoPreviewUrl: URL.createObjectURL(file) }));
+    } catch (error) {
+      if (error.response?.status !== 404) {
+        alert(error.response?.data?.message || 'Logo upload failed.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditShopData(prev => ({ ...prev, logoBase64: reader.result }));
+        setEditShopData(prev => ({ ...prev, logoBase64: reader.result, logoObjectKey: '', logoPreviewUrl: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -362,8 +373,8 @@ export default function Settings() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Branch Logo</label>
                   <div className="flex items-center space-x-4">
-                    {editShopData.logoBase64 && (
-                      <img src={editShopData.logoBase64} alt="Preview" className="h-12 w-12 object-contain rounded border border-slate-200" />
+                    {editShopData.logoPreviewUrl && (
+                      <img src={editShopData.logoPreviewUrl} alt="Preview" className="h-12 w-12 object-contain rounded border border-slate-200" />
                     )}
                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                   </div>

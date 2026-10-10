@@ -43,6 +43,7 @@ public class Purchase_entity {
     
     @Column(length = 50)
     private String paymentMethod;
+    @Builder.Default
     private BigDecimal amountPaid = BigDecimal.ZERO;
 
     @Column(name = "created_at")

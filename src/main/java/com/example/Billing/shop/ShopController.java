@@ -47,6 +47,7 @@ public class ShopController {
                 .address(request.getAddress())
                 .owner(owner)
                 .active(true)
+                .trialEndsAt(java.time.LocalDateTime.now().plusDays(7))
                 .build();
 
         return ResponseEntity.ok(shopRepository.save(newShop));
@@ -76,6 +77,10 @@ public class ShopController {
         if (request.getState() != null) shop.setState(request.getState());
         if (request.getAddress() != null) shop.setAddress(request.getAddress());
         if (request.getLogoBase64() != null) shop.setLogoBase64(request.getLogoBase64());
+        if (request.getLogoObjectKey() != null) {
+            shop.setLogoObjectKey(request.getLogoObjectKey());
+            shop.setLogoBase64(null);
+        }
 
         return ResponseEntity.ok(shopRepository.save(shop));
     }
@@ -147,6 +152,7 @@ class ShopUpdateRequest {
     private String state;
     private String address;
     private String logoBase64;
+    private String logoObjectKey;
 }
 
 @lombok.Data

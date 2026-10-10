@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -36,6 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         return path.equals("/api/auth/register")
                 || path.equals("/api/auth/login")
+                || path.equals("/api/auth/refresh")
                 || path.equals("/api/auth/logout")
                 || path.equals("/api/auth/forgot-password")
                 || path.equals("/api/auth/reset-password")
@@ -54,12 +57,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        System.out.println(
-                "JWT Filter: "
-                        + request.getMethod()
-                        + " "
-                        + request.getRequestURI()
-        );
+        log.debug("JWT filter {} {}", request.getMethod(), request.getRequestURI());
 
 
         // =================================================
@@ -87,7 +85,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         if (token == null || token.isBlank()) {
-            System.out.println("JWT: No token found in cookies or header");
             filterChain.doFilter(request, response);
             return;
         }
@@ -101,10 +98,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             if (!jwtService.isTokenValid(token)) {
 
-                System.out.println(
-                        "JWT: Invalid token"
-                );
-
                 filterChain.doFilter(
                         request,
                         response
@@ -115,19 +108,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 
             // =============================================
-            // EXTRACT EMAIL
+            // EXTRACT IMMUTABLE USER ID
             // =============================================
 
-            String email =
-                    jwtService.extractEmail(token);
+            Long userId = jwtService.extractUserId(token);
 
 
-            if (email == null ||
-                    email.isBlank()) {
-
-                System.out.println(
-                        "JWT: Email missing"
-                );
+            if (userId == null) {
 
                 filterChain.doFilter(
                         request,
@@ -153,15 +140,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 User_entity user =
                         userRepository
-                                .findByEmail(email)
+                                .findById(userId)
                                 .orElse(null);
 
 
                 if (user == null) {
-
-                    System.out.println(
-                            "JWT: User not found"
-                    );
 
                     filterChain.doFilter(
                             request,
@@ -177,10 +160,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // =========================================
 
                 if (!user.isActive()) {
-
-                    System.out.println(
-                            "JWT: User inactive"
-                    );
 
                     filterChain.doFilter(
                             request,
@@ -199,11 +178,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         user.getRole();
 
 
-                System.out.println(
-                        "JWT: Role = " + role
-                );
-
-
                 // =========================================
                 // CREATE SPRING SECURITY AUTHORITY
                 // =========================================
@@ -214,35 +188,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                         "ROLE_" + role
                                 )
                         );
-
-
-                System.out.println(
-                        "JWT: Authority = ROLE_" + role
-                );
-
-
-                // =========================================
-                // USER INFORMATION
-                // =========================================
-
-                System.out.println(
-                        "JWT: Authenticated "
-                                + user.getEmail()
-                );
-
-
-                // =========================================
-                // SHOP INFORMATION
-                // =========================================
-
-                System.out.println(
-                        "JWT: Shop ID = "
-                                + (
-                                user.getShop() != null
-                                        ? user.getShop().getId()
-                                        : null
-                        )
-                );
 
 
                 // =========================================
@@ -270,10 +215,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
 
-            System.out.println(
-                    "JWT ERROR: "
-                            + e.getMessage()
-            );
+            log.debug("JWT authentication rejected: {}", e.getClass().getSimpleName());
 
             SecurityContextHolder
                     .clearContext();

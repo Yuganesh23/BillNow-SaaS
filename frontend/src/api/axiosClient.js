@@ -18,12 +18,29 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
+let refreshPromise = null;
+
 axiosClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Clear token and redirect to login if unauthorized
-      // token cookie will be cleared by the backend or expires automatically
+  async (error) => {
+    const original = error.config;
+    const status = error.response?.status;
+    const isAuthEndpoint = original?.url?.startsWith('/auth/');
+
+    if (status === 401 && !isAuthEndpoint && !original?._retried) {
+      original._retried = true;
+      refreshPromise ??= axiosClient.post('/auth/refresh').finally(() => {
+        refreshPromise = null;
+      });
+      try {
+        await refreshPromise;
+        return axiosClient(original);
+      } catch {
+        // The refresh failure is handled below by the refresh request itself.
+      }
+    }
+
+    if ((status === 401 || status === 403) && original?.url !== '/auth/logout') {
       localStorage.removeItem('user');
       window.dispatchEvent(new Event('auth:unauthorized'));
     }

@@ -18,6 +18,7 @@ class JwtAuthFilterTest {
     void skipsEveryPublicAuthenticationEndpoint() {
         assertTrue(shouldSkip("/api/auth/register"));
         assertTrue(shouldSkip("/api/auth/login"));
+        assertTrue(shouldSkip("/api/auth/refresh"));
         assertTrue(shouldSkip("/api/auth/logout"));
         assertTrue(shouldSkip("/api/auth/forgot-password"));
         assertTrue(shouldSkip("/api/auth/reset-password"));

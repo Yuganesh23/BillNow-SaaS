@@ -24,7 +24,8 @@ import java.util.List;
                                 "shop_id",
                                 "invoiceNumber"
                         }
-                )
+                ),
+                @UniqueConstraint(name = "uk_invoice_shop_idempotency", columnNames = {"shop_id", "idempotency_key"})
         }
 )
 @Getter
@@ -93,6 +94,9 @@ public class Invoice_entity {
             length = 50
     )
     private String invoiceNumber;
+
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
 
 
     // =====================================================

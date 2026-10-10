@@ -55,6 +55,9 @@ public class Shop_entity {
     @Column(columnDefinition = "TEXT")
     private String logoBase64;
 
+    @Column(name = "logo_object_key", length = 500)
+    private String logoObjectKey;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private SubscriptionTier subscriptionTier = SubscriptionTier.TRIAL;

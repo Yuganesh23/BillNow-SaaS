@@ -13,6 +13,7 @@ public class ShopWhatsAppConfigService {
 
     private final ShopWhatsAppConfigRepository configRepository;
     private final ShopContextResolver shopContextResolver;
+    private final com.example.Billing.security.SecretStringCipher secretStringCipher;
 
 
     // =====================================================
@@ -77,7 +78,7 @@ public class ShopWhatsAppConfigService {
                                     request.getBusinessAccountId()
                             )
                             .accessToken(
-                                    request.getAccessToken().trim()
+                                    secretStringCipher.encrypt(request.getAccessToken().trim())
                             )
                             .enabled(
                                     request.getEnabled() == null
@@ -100,7 +101,7 @@ public class ShopWhatsAppConfigService {
             );
 
             config.setAccessToken(
-                    request.getAccessToken().trim()
+                    secretStringCipher.encrypt(request.getAccessToken().trim())
             );
 
             if (request.getEnabled() != null) {

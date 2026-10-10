@@ -36,7 +36,9 @@ export const createInvoice = async (invoiceData) => {
       }, 500);
     });
   }
-  const response = await axiosClient.post('/invoices', invoiceData);
+  const response = await axiosClient.post('/invoices', invoiceData, {
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
+  });
   return response.data;
 };
 

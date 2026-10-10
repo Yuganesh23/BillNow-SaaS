@@ -35,6 +35,8 @@ public class InvoiceController {
 
             Authentication authentication,
 
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+
             @Valid
             @RequestBody
             CreateInvoiceRequest_Dto request
@@ -48,7 +50,8 @@ public class InvoiceController {
         InvoiceResponse_Dto response =
                 invoiceService.createInvoice(
                         user,
-                        request
+                        request,
+                        idempotencyKey
                 );
 
 

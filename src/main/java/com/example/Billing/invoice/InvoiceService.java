@@ -41,7 +41,8 @@ public class InvoiceService {
 
     public InvoiceResponse_Dto createInvoice(
             User_entity user,
-            CreateInvoiceRequest_Dto request
+            CreateInvoiceRequest_Dto request,
+            String idempotencyKey
     ) {
 
         // -------------------------------------------------
@@ -53,6 +54,11 @@ public class InvoiceService {
 
         Long shopId =
                 shop.getId();
+
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var existingInvoice = invoiceRepository.findByShopIdAndIdempotencyKey(shopId, idempotencyKey.trim());
+            if (existingInvoice.isPresent()) return mapToResponse(existingInvoice.get());
+        }
 
         // -------------------------------------------------
         // SUBSCRIPTION CHECK
@@ -145,11 +151,9 @@ public class InvoiceService {
 
                         .biller(user)
 
-                        .invoiceNumber(
-                                generateInvoiceNumber(
-                                        shopId
-                                )
-                        )
+                        .invoiceNumber(generateInvoiceNumber(shopId))
+
+                        .idempotencyKey(idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim())
 
                         .subtotal(
                                 BigDecimal.ZERO
@@ -550,19 +554,12 @@ public class InvoiceService {
     private String generateInvoiceNumber(
             Long shopId
     ) {
-
-        long count =
-                invoiceRepository
-                        .findByShopIdOrderByCreatedAtDesc(
-                                shopId
-                        )
-                        .size();
-
-
-        return String.format(
-                "INV-%05d",
-                count + 1
-        );
+        Shop_entity lockedShop = shopRepository.findByIdForUpdate(shopId)
+                .orElseThrow(() -> new RuntimeException("Shop not found"));
+        int next = lockedShop.getLastInvoiceNumber() + 1;
+        lockedShop.setLastInvoiceNumber(next);
+        shopRepository.save(lockedShop);
+        return String.format("INV-%05d", next);
     }
 
 
