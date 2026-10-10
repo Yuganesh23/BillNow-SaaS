@@ -50,3 +50,6 @@ Thumbs.d
 *.db
 *.sqlite
 *.db-journal
+.neon
+.env.local
+node_modules/
