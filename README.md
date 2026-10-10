@@ -10,15 +10,13 @@ The proxy is important: browser requests stay on the Vercel origin while Vercel 
 
 ## 1. Create the Neon database
 
-Create a Neon project and copy the pooled connection details. Railway needs these variables:
+Create a Neon project and copy its pooled connection string (the hostname ends in `-pooler`). The backend accepts Neon's standard URL directly:
 
 ```env
-DATABASE_URL=jdbc:postgresql://YOUR-POOLER-HOST/neondb?sslmode=require
-DATABASE_USERNAME=YOUR_NEON_ROLE
-DATABASE_PASSWORD=YOUR_NEON_PASSWORD
+DATABASE_URL=postgresql://YOUR_NEON_ROLE:YOUR_NEON_PASSWORD@YOUR-POOLER-HOST/neondb?sslmode=require
 ```
 
-Use the host ending in `-pooler` and keep `sslmode=require`. The app limits its Hikari connection pool to five connections by default. The schema is created/updated by Hibernate on startup (`JPA_DDL_AUTO=update`).
+The JDBC-style format is also supported; when using it, provide credentials separately as `DATABASE_USERNAME` and `DATABASE_PASSWORD`. Keep `sslmode=require`. The app limits its Hikari connection pool to five connections by default. The schema is created/updated by Hibernate on startup (`JPA_DDL_AUTO=update`).
 
 ## 2. Deploy the backend to Railway
 
@@ -28,9 +26,7 @@ Add the following service variables, using `.env.example` as the complete templa
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
-DATABASE_URL=jdbc:postgresql://YOUR-POOLER-HOST/neondb?sslmode=require
-DATABASE_USERNAME=YOUR_NEON_ROLE
-DATABASE_PASSWORD=YOUR_NEON_PASSWORD
+DATABASE_URL=postgresql://YOUR_NEON_ROLE:YOUR_NEON_PASSWORD@YOUR-POOLER-HOST/neondb?sslmode=require
 JWT_SECRET=GENERATE_AT_LEAST_32_RANDOM_BYTES
 AUTH_COOKIE_SECURE=true
 AUTH_COOKIE_SAME_SITE=Lax
