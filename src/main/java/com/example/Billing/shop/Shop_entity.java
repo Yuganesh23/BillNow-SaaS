@@ -53,7 +53,7 @@ public class Shop_entity {
     private String address;
 
     @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String logoBase64;
 
     @Enumerated(EnumType.STRING)

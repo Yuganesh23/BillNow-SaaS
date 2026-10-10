@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { getSuppliers } from '../api/supplierApi';
 import { LoadingState } from '../components/common/States';
-import { Plus, Search, Mail, Phone, ExternalLink } from 'lucide-react';
+import { Plus, Search, Mail, Phone, ExternalLink, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Suppliers() {

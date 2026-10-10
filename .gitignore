@@ -35,6 +35,13 @@ build/
 ### Environment / Secrets ###
 .env
 application-local.properties
+frontend/.env
+frontend/.env.local
+frontend/.vercel/
+
+### Codex workspace ###
+/outputs/
+/work/
 
 ### OS ###
 .DS_Store

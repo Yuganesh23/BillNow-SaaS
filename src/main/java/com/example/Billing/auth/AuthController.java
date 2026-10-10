@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -14,6 +15,12 @@ import org.springframework.http.HttpHeaders;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${auth.cookie.secure:false}")
+    private boolean secureCookie;
+
+    @Value("${auth.cookie.same-site:Lax}")
+    private String sameSite;
 
 
     // =====================================================
@@ -34,10 +41,10 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
                 .httpOnly(true)
-                .secure(false) // Set true in production (HTTPS)
+                .secure(secureCookie)
                 .path("/")
                 .maxAge(7 * 24 * 60 * 60) // 7 days
-                .sameSite("Lax")
+                .sameSite(sameSite)
                 .build();
                 
         // Return without token in body to be safe, or leave it for now.
@@ -67,10 +74,10 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
                 .httpOnly(true)
-                .secure(false) // Set true in prod
+                .secure(secureCookie)
                 .path("/")
                 .maxAge(7 * 24 * 60 * 60)
-                .sameSite("Lax")
+                .sameSite(sameSite)
                 .build();
 
         return ResponseEntity.ok()
@@ -86,10 +93,10 @@ public class AuthController {
     public ResponseEntity<?> logout() {
         ResponseCookie cookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
                 .path("/")
                 .maxAge(0) // Expire immediately
-                .sameSite("Lax")
+                .sameSite(sameSite)
                 .build();
 
         return ResponseEntity.ok()
