@@ -37,7 +37,7 @@ frontend/
 Copy `.env.example` to `.env`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080/api
+VITE_API_BASE_URL=
 VITE_USE_MOCK_API=false
 ```
 
@@ -64,7 +64,7 @@ VITE_USE_MOCK_API=false
 ## Backend Dependency
 
 This frontend is designed to consume the BillNow Spring Boot backend.
-Ensure the backend is running on `http://localhost:8080` (or update `VITE_API_BASE_URL`) with CORS configured to allow the frontend origin.
+During local development, Vite proxies `/api` to the backend on `http://localhost:8083`. On Vercel, leave `VITE_API_BASE_URL` blank and set the server-side `BACKEND_ORIGIN` variable to the Railway public URL.
 
 ## Known Limitations & V2 Recommendations
 - PDF generation currently relies on UI/Print or a future backend endpoint `/api/invoices/{id}/pdf`.
