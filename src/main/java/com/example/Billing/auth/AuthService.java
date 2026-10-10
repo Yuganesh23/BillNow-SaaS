@@ -32,8 +32,10 @@ public class AuthService {
         // CHECK EMAIL
         // =================================================
 
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
         if (userRepository.existsByEmail(
-                request.getEmail()
+                normalizedEmail
         )) {
 
             throw new RuntimeException(
@@ -54,7 +56,11 @@ public class AuthService {
                         )
 
                         .email(
-                                request.getEmail()
+                                normalizedEmail
+                        )
+
+                        .mobileNumber(
+                                request.getMobileNumber()
                         )
 
                         .password(
@@ -96,7 +102,19 @@ public class AuthService {
                         )
 
                         .email(
-                                request.getEmail()
+                                normalizedEmail
+                        )
+
+                        .mobileNumber(
+                                request.getMobileNumber()
+                        )
+
+                        .address(
+                                request.getAddress()
+                        )
+
+                        .logoBase64(
+                                request.getLogoBase64()
                         )
 
                         .active(

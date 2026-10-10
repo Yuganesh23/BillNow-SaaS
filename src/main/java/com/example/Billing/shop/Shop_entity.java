@@ -52,7 +52,6 @@ public class Shop_entity {
     @Column(length = 500)
     private String address;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String logoBase64;
 

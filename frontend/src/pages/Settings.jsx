@@ -55,8 +55,8 @@ export default function Settings() {
       alert('Profile updated successfully!');
       
       if (emailChanged) {
-        alert('You changed your email address. Please log in again.');
-        logout();
+        alert(`You changed your login email. Sign in again using ${userProfile.email}.`);
+        await logout();
       }
     } catch (e) {
       alert('Failed to update profile.');

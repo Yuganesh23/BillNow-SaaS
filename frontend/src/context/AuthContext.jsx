@@ -16,7 +16,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      logout();
+      // Do not call the logout endpoint here. If that endpoint itself returns
+      // 401/403, the Axios interceptor emits this event again and creates an
+      // infinite logout request loop.
+      setUser(null);
+      localStorage.removeItem('user');
     };
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
@@ -43,9 +47,10 @@ export const AuthProvider = ({ children }) => {
       await axiosClient.post('/auth/logout');
     } catch(e) {
       console.error('Logout API failed', e);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('user');
     }
-    setUser(null);
-    localStorage.removeItem('user');
   };
 
   const value = {
