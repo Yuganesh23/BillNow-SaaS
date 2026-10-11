@@ -104,7 +104,8 @@ export default function PurchaseDetails() {
           </div>
         </div>
 
-        <table className="min-w-full mb-8">
+        <div className="mobile-table-scroll mb-8">
+        <table className="min-w-full">
           <thead className="border-b border-slate-200">
             <tr>
               <th className="py-3 text-left text-xs font-medium text-slate-500 uppercase">Product</th>
@@ -134,6 +135,7 @@ export default function PurchaseDetails() {
             ))}
           </tbody>
         </table>
+        </div>
 
         <div className="flex justify-end pt-6 border-t border-slate-200">
           <div className="w-64 space-y-3">
@@ -213,7 +215,7 @@ export default function PurchaseDetails() {
         {purchase.payments && purchase.payments.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8 mt-8">
             <h3 className="text-lg font-medium text-slate-900 mb-4 border-b pb-2">Payment History</h3>
-            <div className="overflow-x-auto">
+            <div className="mobile-table-scroll">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>

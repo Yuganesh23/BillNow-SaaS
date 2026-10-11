@@ -137,7 +137,7 @@ public class AuthController {
     private HttpHeaders cookieHeaders(String accessToken, String refreshToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.SET_COOKIE, authCookie("jwt", accessToken, Duration.ofMinutes(jwtService.getAccessTokenMinutes())).toString());
-        headers.add(HttpHeaders.SET_COOKIE, authCookie("refresh_token", refreshToken, Duration.ofDays(7)).toString());
+        headers.add(HttpHeaders.SET_COOKIE, authCookie("refresh_token", refreshToken, Duration.ofDays(refreshTokenService.getRefreshTokenDays())).toString());
         return headers;
     }
 

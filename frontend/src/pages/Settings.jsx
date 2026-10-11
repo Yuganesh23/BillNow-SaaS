@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
-import { Building2, Plus, Mail, Phone, User, Edit2, Trash2 } from 'lucide-react';
+import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -17,6 +17,8 @@ export default function Settings() {
   const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
   const [editingShop, setEditingShop] = useState(null);
   const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', logoBase64: '', logoObjectKey: '', logoPreviewUrl: '', gstin: '', legalName: '', state: '' });
+  const [whatsAppConfig, setWhatsAppConfig] = useState({ phoneNumberId: '', businessAccountId: '', accessToken: '', enabled: true, configured: false });
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -34,7 +36,22 @@ export default function Settings() {
       
       if (user?.role === 'SHOP_OWNER') {
         const shopsRes = await axiosClient.get('/shops');
-        setShops(shopsRes.data);
+        const shopsWithLogos = await Promise.all(shopsRes.data.map(async (shop) => {
+          if (!shop.logoObjectKey) return { ...shop, logoUrl: shop.logoBase64 || '' };
+          try {
+            const { data } = await axiosClient.get('/storage/object-url', { params: { key: shop.logoObjectKey } });
+            return { ...shop, logoUrl: data.url };
+          } catch {
+            return { ...shop, logoUrl: shop.logoBase64 || '' };
+          }
+        }));
+        setShops(shopsWithLogos);
+        try {
+          const { data } = await axiosClient.get('/shop/whatsapp');
+          setWhatsAppConfig({ phoneNumberId: data.phoneNumberId || '', businessAccountId: data.businessAccountId || '', accessToken: '', enabled: data.enabled, configured: true });
+        } catch (error) {
+          if (error.response?.status !== 404) console.error('Unable to load WhatsApp configuration', error);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -69,7 +86,7 @@ export default function Settings() {
       address: shop.address || '',
       logoBase64: shop.logoBase64 || '',
       logoObjectKey: shop.logoObjectKey || '',
-      logoPreviewUrl: shop.logoBase64 || '',
+      logoPreviewUrl: shop.logoUrl || shop.logoBase64 || '',
       gstin: shop.gstin || '',
       legalName: shop.legalName || '',
       state: shop.state || ''
@@ -80,14 +97,43 @@ export default function Settings() {
   const handleUpdateShop = async (e) => {
     e.preventDefault();
     try {
-      await axiosClient.put(`/shops/${editShopData.id}`, editShopData);
+      const { id } = editShopData;
+      const payload = {
+        name: editShopData.name, invoiceName: editShopData.invoiceName, email: editShopData.email,
+        mobileNumber: editShopData.mobileNumber, address: editShopData.address, gstin: editShopData.gstin,
+        legalName: editShopData.legalName, state: editShopData.state,
+        logoBase64: editShopData.logoBase64, logoObjectKey: editShopData.logoObjectKey,
+      };
+      await axiosClient.put(`/shops/${id}`, payload);
       alert('Branch updated successfully!');
       setEditingShop(null);
-      fetchData();
-      fetchBranches();
+      await Promise.all([fetchData(), fetchBranches()]);
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to update branch.');
+    }
+  };
+
+  const handleSaveWhatsApp = async (e) => {
+    e.preventDefault();
+    if (!whatsAppConfig.accessToken && !whatsAppConfig.configured) {
+      alert('Enter a Meta WhatsApp access token.');
+      return;
+    }
+    setSavingWhatsApp(true);
+    try {
+      await axiosClient.post('/shop/whatsapp', {
+        phoneNumberId: whatsAppConfig.phoneNumberId,
+        businessAccountId: whatsAppConfig.businessAccountId,
+        accessToken: whatsAppConfig.accessToken,
+        enabled: whatsAppConfig.enabled,
+      });
+      setWhatsAppConfig((current) => ({ ...current, accessToken: '', configured: true }));
+      alert('WhatsApp integration saved.');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to save WhatsApp integration.');
+    } finally {
+      setSavingWhatsApp(false);
     }
   };
 
@@ -219,8 +265,8 @@ export default function Settings() {
                 <div key={shop.id} className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
-                      {shop.logoBase64 ? (
-                        <img src={shop.logoBase64} alt={shop.name} className="w-10 h-10 rounded-md object-contain border border-slate-200 mr-3 bg-white" />
+                      {shop.logoUrl || shop.logoBase64 ? (
+                        <img src={shop.logoUrl || shop.logoBase64} alt={shop.name} className="w-10 h-10 rounded-md object-contain border border-slate-200 mr-3 bg-white" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
                           <Building2 className="w-5 h-5" />
@@ -258,6 +304,26 @@ export default function Settings() {
               )}
             </div>
           </div>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
+          <form onSubmit={handleSaveWhatsApp} className="lg:col-span-2 bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
+            <h2 className="text-lg font-medium text-slate-900 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-green-600" /> WhatsApp Cloud API</h2>
+            <p className="mt-1 text-sm text-slate-500">Connect the active branch to Meta WhatsApp so invoice PDFs can be sent from the invoice screen.</p>
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="text-sm font-medium text-slate-700">Phone Number ID
+                <input required value={whatsAppConfig.phoneNumberId} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, phoneNumberId: e.target.value })} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">Business Account ID
+                <input value={whatsAppConfig.businessAccountId} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, businessAccountId: e.target.value })} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+              <label className="text-sm font-medium text-slate-700 md:col-span-2">Access token
+                <input type="password" value={whatsAppConfig.accessToken} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, accessToken: e.target.value })} placeholder={whatsAppConfig.configured ? 'Leave blank to keep the saved token' : 'Meta permanent/system-user token'} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={whatsAppConfig.enabled} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, enabled: e.target.checked })} /> Enable invoice sending</label>
+            <button disabled={savingWhatsApp} className="mt-5 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">{savingWhatsApp ? 'Saving...' : 'Save WhatsApp settings'}</button>
+          </form>
         )}
 
       {/* Add Branch Modal */}

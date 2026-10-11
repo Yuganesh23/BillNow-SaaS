@@ -179,10 +179,11 @@
 .popular-label { position: absolute; top: 17px; right: 18px; padding: 5px 8px; border-radius: 999px; color: var(--green-dark); background: #dcf2e6; font-size: 8px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
 .price-card-heading > span { font-size: 18px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .price-card-heading p { min-height: 48px; margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-.price { display: flex; align-items: baseline; margin: 27px 0 24px; }
+.price { display: flex; align-items: baseline; margin: 27px 0 5px; }
 .price sup { align-self: flex-start; margin-top: 8px; font-size: 17px; font-weight: 800; }
 .price strong { font-size: 43px; letter-spacing: -.055em; }
 .price > span { margin-left: 6px; color: var(--muted); font-size: 11px; }
+.pricing-savings { margin: 0 0 22px; color: var(--green-dark); font-size: 12px; font-weight: 800; }
 .price-card .button { width: 100%; }
 .price-card ul { display: flex; flex-direction: column; gap: 13px; margin: 26px 0 0; padding: 24px 0 0; border-top: 1px solid var(--line); list-style: none; }
 .price-card li { display: flex; align-items: center; gap: 9px; color: #59665f; font-size: 12px; }

@@ -4,6 +4,7 @@ import com.example.Billing.auth.User_entity;
 import com.example.Billing.common.AppException;
 import com.example.Billing.config.ShopContextResolver;
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.shop.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +30,7 @@ public class ObjectStorageController {
     private static final Set<String> IMAGE_TYPES = Set.of("image/png", "image/jpeg", "image/webp", "image/svg+xml");
     private final S3Presigner presigner;
     private final ShopContextResolver shopContextResolver;
+    private final ShopRepository shopRepository;
 
     @Value("${storage.bucket:uploads}")
     private String bucket;
@@ -55,9 +57,10 @@ public class ObjectStorageController {
 
     @GetMapping("/object-url")
     public Map<String, String> createReadUrl(Authentication authentication, @RequestParam String key) {
-        Shop_entity shop = activeShop(authentication);
-        String expectedPrefix = "shops/" + shop.getId() + "/";
-        if (!key.startsWith(expectedPrefix)) {
+        User_entity user = (User_entity) authentication.getPrincipal();
+        boolean ownedObject = shopRepository.findByOwnerId(user.getId()).stream()
+                .anyMatch(shop -> key.startsWith("shops/" + shop.getId() + "/"));
+        if (!ownedObject) {
             throw new AppException(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Object does not belong to this shop.");
         }
         GetObjectRequest get = GetObjectRequest.builder().bucket(bucket).key(key).build();

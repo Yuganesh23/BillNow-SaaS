@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
@@ -14,6 +15,18 @@ import java.net.URI;
 @Configuration
 @ConditionalOnProperty(name = "storage.enabled", havingValue = "true")
 public class ObjectStorageConfig {
+    @Bean(destroyMethod = "close")
+    S3Client s3Client(
+            @Value("${storage.endpoint}") String endpoint,
+            @Value("${storage.region}") String region) {
+        return S3Client.builder()
+                .endpointOverride(URI.create(endpoint))
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+    }
+
     @Bean(destroyMethod = "close")
     S3Presigner s3Presigner(
             @Value("${storage.endpoint}") String endpoint,

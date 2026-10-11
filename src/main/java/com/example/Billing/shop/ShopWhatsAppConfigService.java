@@ -2,6 +2,8 @@ package com.example.Billing.shop;
 
 import com.example.Billing.auth.User_entity;
 import lombok.RequiredArgsConstructor;
+import com.example.Billing.common.AppException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +70,10 @@ public class ShopWhatsAppConfigService {
 
         if (config == null) {
 
+            if (request.getAccessToken() == null || request.getAccessToken().isBlank()) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "WHATSAPP_TOKEN_REQUIRED", "WhatsApp access token is required");
+            }
+
             config =
                     ShopWhatsAppConfig.builder()
                             .shop(shop)
@@ -100,9 +106,9 @@ public class ShopWhatsAppConfigService {
                     request.getBusinessAccountId()
             );
 
-            config.setAccessToken(
-                    secretStringCipher.encrypt(request.getAccessToken().trim())
-            );
+            if (request.getAccessToken() != null && !request.getAccessToken().isBlank()) {
+                config.setAccessToken(secretStringCipher.encrypt(request.getAccessToken().trim()));
+            }
 
             if (request.getEnabled() != null) {
 
@@ -156,11 +162,11 @@ public class ShopWhatsAppConfigService {
         ShopWhatsAppConfig config =
                 configRepository
                         .findByShopId(shop.getId())
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "WhatsApp configuration not found"
-                                )
-                        );
+                        .orElseThrow(() -> new AppException(
+                                HttpStatus.NOT_FOUND,
+                                "WHATSAPP_NOT_CONFIGURED",
+                                "WhatsApp configuration not found"
+                        ));
 
 
         return mapToResponse(config);

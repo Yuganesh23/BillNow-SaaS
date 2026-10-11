@@ -60,7 +60,7 @@ export default function Purchases() {
         />
       </div>
 
-      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
+      <div className="mobile-table-scroll bg-white shadow-sm ring-1 ring-slate-200 rounded-lg">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
               <tr>

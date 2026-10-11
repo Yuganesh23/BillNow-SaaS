@@ -15,9 +15,9 @@ const featureCards = [
 ];
 
 const plans = [
-  { name: 'Base', price: '499', description: 'For a single shop that needs reliable billing.', features: ['Unlimited invoices', 'Standard PDF generation', '1 admin user'] },
-  { name: 'Pro', price: '999', description: 'For a growing retail team that wants more control.', features: ['Everything in Base', 'WhatsApp integration', 'Up to 3 staff accounts', 'Low-stock alerts'], featured: true },
-  { name: 'Enterprise', price: '2,499', description: 'For wholesalers and multi-branch businesses.', features: ['Everything in Pro', 'Multi-branch support', 'Unlimited staff', 'GST Excel exports'] },
+  { name: 'Base', price: '4,999', savings: 'Save ₹989/year', description: 'For a single shop that needs reliable billing.', features: ['Unlimited invoices', 'Standard PDF generation', '1 admin user'] },
+  { name: 'Pro', price: '9,999', savings: 'Save ₹1,989/year', description: 'For a growing retail team that wants more control.', features: ['Everything in Base', 'WhatsApp integration', 'Up to 3 staff accounts', 'Low-stock alerts'], featured: true },
+  { name: 'Enterprise', price: '24,999', savings: 'Save ₹4,989/year', description: 'For wholesalers and multi-branch businesses.', features: ['Everything in Pro', 'Multi-branch support', 'Unlimited staff', 'GST Excel exports'] },
 ];
 
 const faqs = [
@@ -181,10 +181,10 @@ export default function LandingPage() {
         </div></section>
 
         <section className="pricing-section" id="pricing"><div className="landing-container">
-          <div className="section-heading centered-heading"><span className="section-kicker">Straightforward pricing</span><h2>Start lean. Scale when you are ready.</h2><p>Every new account begins with a 7-day free trial. Choose a monthly plan when BillNow earns its place at your counter.</p></div>
+          <div className="section-heading centered-heading"><span className="section-kicker">Straightforward pricing</span><h2>Start lean. Scale when you are ready.</h2><p>Every new account begins with a 7-day free trial. Annual billing keeps the price predictable for the whole year.</p></div>
           <div className="pricing-grid">{plans.map((plan) => (
             <article className={`price-card ${plan.featured ? 'featured' : ''}`} key={plan.name}>
-              {plan.featured && <span className="popular-label">Most popular</span>}<div className="price-card-heading"><span>{plan.name}</span><p>{plan.description}</p></div><div className="price"><sup>₹</sup><strong>{plan.price}</strong><span>/ month</span></div><Link to="/register" className={`button ${plan.featured ? 'button-primary' : 'button-outline'}`}>Start free <ArrowRight size={16} /></Link><ul>{plan.features.map((feature) => <li key={feature}><span><Check size={14} /></span>{feature}</li>)}</ul>
+              {plan.featured && <span className="popular-label">Most popular</span>}<div className="price-card-heading"><span>{plan.name}</span><p>{plan.description}</p></div><div className="price"><sup>₹</sup><strong>{plan.price}</strong><span>/ year</span></div><p className="pricing-savings">{plan.savings}</p><Link to="/register" className={`button ${plan.featured ? 'button-primary' : 'button-outline'}`}>Start free <ArrowRight size={16} /></Link><ul>{plan.features.map((feature) => <li key={feature}><span><Check size={14} /></span>{feature}</li>)}</ul>
             </article>
           ))}</div><p className="pricing-note"><ShieldCheck size={15} /> No credit card required to start your trial.</p>
         </div></section>

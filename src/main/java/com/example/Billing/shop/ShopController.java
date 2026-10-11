@@ -76,8 +76,11 @@ public class ShopController {
         if (request.getLegalName() != null) shop.setLegalName(request.getLegalName());
         if (request.getState() != null) shop.setState(request.getState());
         if (request.getAddress() != null) shop.setAddress(request.getAddress());
-        if (request.getLogoBase64() != null) shop.setLogoBase64(request.getLogoBase64());
-        if (request.getLogoObjectKey() != null) {
+        if (request.getLogoBase64() != null && !request.getLogoBase64().isBlank()) {
+            shop.setLogoBase64(request.getLogoBase64());
+            shop.setLogoObjectKey(null);
+        }
+        if (request.getLogoObjectKey() != null && !request.getLogoObjectKey().isBlank()) {
             shop.setLogoObjectKey(request.getLogoObjectKey());
             shop.setLogoBase64(null);
         }
@@ -107,28 +110,6 @@ public class ShopController {
         }
     }
 
-    @PreAuthorize("hasRole('SHOP_OWNER')")
-    @PostMapping("/{id}/upgrade")
-    @org.springframework.transaction.annotation.Transactional
-    public org.springframework.http.ResponseEntity<Shop_entity> upgradeSubscription(
-            org.springframework.security.core.Authentication authentication,
-            @org.springframework.web.bind.annotation.PathVariable Long id,
-            @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, String> body
-    ) {
-        com.example.Billing.auth.User_entity userDetails = (com.example.Billing.auth.User_entity) authentication.getPrincipal();
-        Shop_entity shop = shopRepository.findById(id).orElseThrow(() -> new RuntimeException("Shop not found"));
-        if (!shop.getOwner().getId().equals(userDetails.getId())) throw new RuntimeException("Unauthorized");
-
-        String tierStr = body.get("tier");
-        if (tierStr == null) throw new RuntimeException("Tier is required");
-        
-        SubscriptionTier newTier = SubscriptionTier.valueOf(tierStr.toUpperCase());
-        
-        shop.setSubscriptionTier(newTier);
-        shop.setSubscriptionEndsAt(java.time.LocalDateTime.now().plusDays(30));
-        
-        return org.springframework.http.ResponseEntity.ok(shopRepository.save(shop));
-    }
 }
 
 class ErrorResponse {

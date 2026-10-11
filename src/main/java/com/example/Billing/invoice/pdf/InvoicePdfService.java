@@ -14,6 +14,8 @@ import com.example.Billing.auth.User_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,8 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.awt.Color;
 
 import java.io.ByteArrayOutputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +36,10 @@ public class InvoicePdfService {
     private final InvoiceRepository invoiceRepository;
     private final ShopContextResolver shopContextResolver;
     private final PaymentRepository paymentRepository;
+    private final ObjectProvider<S3Client> s3ClientProvider;
+
+    @Value("${storage.bucket:uploads}")
+    private String storageBucket;
 
     @Transactional(readOnly = true)
     public byte[] generateInvoicePdf(User_entity user, Long invoiceId) {
@@ -93,14 +101,10 @@ public class InvoicePdfService {
             middleHeader.setHorizontalAlignment(Element.ALIGN_CENTER);
             middleHeader.setVerticalAlignment(Element.ALIGN_MIDDLE);
             
-            if (shop.getLogoBase64() != null && !shop.getLogoBase64().isEmpty()) {
+            byte[] logoBytes = loadLogo(shop);
+            if (logoBytes != null) {
                 try {
-                    String base64Data = shop.getLogoBase64();
-                    if (base64Data.contains(",")) {
-                        base64Data = base64Data.split(",")[1];
-                    }
-                    byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
-                    Image logo = Image.getInstance(imageBytes);
+                    Image logo = Image.getInstance(logoBytes);
                     logo.scaleToFit(80, 60);
                     logo.setAlignment(Element.ALIGN_CENTER);
                     middleHeader.addElement(logo);
@@ -296,6 +300,29 @@ public class InvoicePdfService {
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate invoice PDF", e);
+        }
+    }
+
+    private byte[] loadLogo(Shop_entity shop) {
+        if (shop.getLogoObjectKey() != null && !shop.getLogoObjectKey().isBlank()) {
+            S3Client s3Client = s3ClientProvider.getIfAvailable();
+            if (s3Client != null) {
+                try {
+                    return s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                            .bucket(storageBucket).key(shop.getLogoObjectKey()).build()).asByteArray();
+                } catch (Exception exception) {
+                    System.err.println("Failed to load object-storage logo: " + exception.getMessage());
+                }
+            }
+        }
+        if (shop.getLogoBase64() == null || shop.getLogoBase64().isBlank()) return null;
+        try {
+            String base64Data = shop.getLogoBase64();
+            if (base64Data.contains(",")) base64Data = base64Data.substring(base64Data.indexOf(',') + 1);
+            return java.util.Base64.getDecoder().decode(base64Data);
+        } catch (Exception exception) {
+            System.err.println("Failed to decode database logo: " + exception.getMessage());
+            return null;
         }
     }
 

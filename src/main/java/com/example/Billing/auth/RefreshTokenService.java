@@ -81,5 +81,9 @@ public class RefreshTokenService {
         }
     }
 
+    public long getRefreshTokenDays() {
+        return refreshTokenDays;
+    }
+
     public record Rotation(User_entity user, String refreshToken) {}
 }
