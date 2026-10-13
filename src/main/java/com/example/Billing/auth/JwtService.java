@@ -16,7 +16,7 @@ public class JwtService {
 
     private final ShopContextResolver shopContextResolver;
 
-    @org.springframework.beans.factory.annotation.Value("${jwt.secret:SmartBillSecretKeyForJwtAuthentication2026SecureKey}")
+    @org.springframework.beans.factory.annotation.Value("${jwt.secret}")
     private String secretKey;
 
     @org.springframework.beans.factory.annotation.Value("${jwt.access-token-minutes:15}")
