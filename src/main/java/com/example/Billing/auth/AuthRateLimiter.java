@@ -2,6 +2,7 @@ package com.example.Billing.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -25,6 +26,7 @@ public class AuthRateLimiter {
     private final int resetEmailMax;
     private final int registerIpMax;
 
+    @Autowired
     public AuthRateLimiter(
             @Value("${auth.rate-limit.window-seconds:60}") long windowSeconds,
             @Value("${auth.rate-limit.login.ip-max:20}") int loginIpMax,
