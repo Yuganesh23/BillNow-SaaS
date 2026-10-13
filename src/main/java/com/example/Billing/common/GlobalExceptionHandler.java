@@ -13,10 +13,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.example.Billing.auth.RateLimitExceededException;
+import org.springframework.http.HttpHeaders;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    @ExceptionHandler(RateLimitExceededException.class)
+    ResponseEntity<ApiError> handleRateLimit(RateLimitExceededException exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.getRetryAfterSeconds()))
+                .body(error(HttpStatus.TOO_MANY_REQUESTS, exception.getCode(), exception.getMessage(), request, Map.of()));
+    }
+
     @ExceptionHandler(AppException.class)
     ResponseEntity<ApiError> handleApp(AppException exception, HttpServletRequest request) {
         return response(exception.getStatus(), exception.getCode(), exception.getMessage(), request, Map.of());
@@ -59,7 +68,11 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiError> response(HttpStatus status, String code, String message,
                                                HttpServletRequest request, Map<String, String> fields) {
-        return ResponseEntity.status(status).body(new ApiError(
-                Instant.now(), status.value(), code, message, request.getRequestURI(), fields));
+        return ResponseEntity.status(status).body(error(status, code, message, request, fields));
+    }
+
+    private ApiError error(HttpStatus status, String code, String message,
+                           HttpServletRequest request, Map<String, String> fields) {
+        return new ApiError(Instant.now(), status.value(), code, message, request.getRequestURI(), fields);
     }
 }

@@ -23,6 +23,7 @@ public class AuthController {
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
+    private final AuthRateLimiter authRateLimiter;
 
     @Value("${auth.cookie.secure:false}")
     private boolean secureCookie;
@@ -39,8 +40,11 @@ public class AuthController {
     public ResponseEntity<AuthResponse_Dto> register(
             @Valid
             @RequestBody
-            RegisterRequest_Dto request
+            RegisterRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+
+        authRateLimiter.checkRegister(httpRequest);
 
         AuthResponse_Dto response =
                 authService.register(
@@ -59,8 +63,11 @@ public class AuthController {
     public ResponseEntity<AuthResponse_Dto> login(
             @Valid
             @RequestBody
-            LoginRequest_Dto request
+            LoginRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+
+        authRateLimiter.checkLogin(httpRequest, request.getEmail());
 
         AuthResponse_Dto response =
                 authService.login(
@@ -104,9 +111,11 @@ public class AuthController {
     // =====================================================
     @PostMapping("/forgot-password")
     public ResponseEntity<java.util.Map<String, String>> forgotPassword(
-            @RequestBody java.util.Map<String, String> request
+            @RequestBody java.util.Map<String, String> request,
+            HttpServletRequest httpRequest
     ) {
         String email = request.get("email");
+        authRateLimiter.checkForgotPassword(httpRequest, email);
         authService.forgotPassword(email);
         java.util.Map<String, String> response = new java.util.HashMap<>();
         response.put("message", "OTP sent to email");
@@ -117,8 +126,10 @@ public class AuthController {
     public ResponseEntity<java.util.Map<String, String>> resetPassword(
             @Valid
             @RequestBody
-            ResetPasswordRequest_Dto request
+            ResetPasswordRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+        authRateLimiter.checkResetPassword(httpRequest, request.getEmail());
         authService.resetPassword(request);
         java.util.Map<String, String> response = new java.util.HashMap<>();
         response.put("message", "Password reset successfully");
