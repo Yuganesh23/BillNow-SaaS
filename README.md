@@ -53,6 +53,8 @@ The browser receives only ten-minute signed URLs; bucket credentials remain on t
 
 Set `WHATSAPP_TOKEN_ENCRYPTION_KEY` to a base64-encoded 32-byte random value before saving WhatsApp credentials. Existing plaintext tokens remain readable and are encrypted the next time the configuration is saved.
 
+Set `OTP_HMAC_SECRET` to a separate high-entropy value for password-reset codes. Authentication rate limits are configurable with the `AUTH_RATE_LIMIT_*` variables documented in [`docs/SECURITY.md`](docs/SECURITY.md).
+
 ## 3. Deploy the frontend to Vercel
 
 Import the same repository in Vercel and set the project Root Directory to `frontend`. Vercel reads `frontend/vercel.json`, builds the Vite app, preserves client-side routes, and runs the `/api/*` proxy function.
