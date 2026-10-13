@@ -11,9 +11,11 @@ import com.example.Billing.payment.Payment_entity;
 import java.util.List;
 import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import com.example.Billing.config.ShopContextResolver;
@@ -46,7 +48,8 @@ public class InvoicePdfService {
 
         Invoice_entity invoice = invoiceRepository
                 .findByIdAndShopId(invoiceId, shopContextResolver.resolveActiveShop(user).getId())
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
         
         Shop_entity shop = invoice.getShop();
         boolean hasShopGst = shop.getGstin() != null && !shop.getGstin().isEmpty();

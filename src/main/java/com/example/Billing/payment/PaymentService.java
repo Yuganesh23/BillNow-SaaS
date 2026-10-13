@@ -3,12 +3,14 @@ package com.example.Billing.payment;
 import java.math.BigDecimal;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.invoice.InvoiceRepository;
 import com.example.Billing.invoice.InvoiceStatus;
 import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,11 +56,7 @@ public class PaymentService {
                                 request.getInvoiceId(),
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found in this shop"
-                                )
-                        );
+                        .orElseThrow(this::invoiceNotFound);
 
 
         // -------------------------------------------------
@@ -228,11 +226,7 @@ public class PaymentService {
                                 invoiceId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found in this shop"
-                                )
-                        );
+                        .orElseThrow(this::invoiceNotFound);
 
 
         // -------------------------------------------------
@@ -244,11 +238,8 @@ public class PaymentService {
                         .findByInvoiceId(
                                 invoice.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Payment not found for this invoice"
-                                )
-                        );
+                        .orElseThrow(() -> new AppException(
+                                HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
 
 
         return mapToResponse(
@@ -260,6 +251,10 @@ public class PaymentService {
     // =====================================================
     // GET USER SHOP
     // =====================================================
+
+    private AppException invoiceNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found");
+    }
 
     private Shop_entity getUserShop(
             User_entity user

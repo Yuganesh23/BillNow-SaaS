@@ -1,9 +1,11 @@
 package com.example.Billing.customer;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,11 +99,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
         return mapToResponse(customer);
     }
@@ -125,11 +123,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
 
         // Check whether WhatsApp number belongs
@@ -192,11 +186,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
         customerRepository.delete(customer);
     }
@@ -232,6 +222,10 @@ public class CustomerService {
         }
 
         return shopContextResolver.resolveActiveShop(user);
+    }
+
+    private AppException customerNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found");
     }
 
 

@@ -1,6 +1,7 @@
 package com.example.Billing.invoice.whatsapp;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.invoice.InvoiceRepository;
 import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.invoice.pdf.InvoicePdfService;
@@ -12,6 +13,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.util.LinkedMultiValueMap;
@@ -103,11 +105,8 @@ public class WhatsAppService {
                                 invoiceId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .orElseThrow(() -> new AppException(
+                                HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
 
 
         // -------------------------------------------------

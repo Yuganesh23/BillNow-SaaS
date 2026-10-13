@@ -1,9 +1,11 @@
 package com.example.Billing.auth;
 
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.common.AppException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import com.example.Billing.invoice.InvoiceRepository;
 import java.math.BigDecimal;
@@ -104,7 +106,7 @@ public class BillerService {
 
         // 3. Find biller
         User_entity biller = userRepository.findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
-                .orElseThrow(() -> new RuntimeException("Biller not found"));
+                .orElseThrow(() -> billerNotFound());
 
         // 4. Check email uniqueness if changed
         String newEmail = request.getEmail().trim().toLowerCase();
@@ -199,11 +201,7 @@ public class BillerService {
         // 3. Find biller
         User_entity biller = userRepository
                 .findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Biller not found"
-                        )
-                );
+                .orElseThrow(() -> billerNotFound());
 
         // 4. Deactivate
         biller.setActive(false);
@@ -245,11 +243,7 @@ public class BillerService {
         // 3. Find biller
         User_entity biller = userRepository
                 .findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Biller not found"
-                        )
-                );
+                .orElseThrow(() -> billerNotFound());
 
         // 4. Activate
         biller.setActive(true);
@@ -291,5 +285,9 @@ public class BillerService {
                 .totalInvoices(totalInvoices)
                 .totalSales(totalSales)
                 .build();
+    }
+
+    private AppException billerNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "BILLER_NOT_FOUND", "Biller not found");
     }
 }

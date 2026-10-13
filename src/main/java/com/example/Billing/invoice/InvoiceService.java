@@ -3,6 +3,7 @@ package com.example.Billing.invoice;
 import java.math.BigDecimal;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.customer.CustomerRepository;
 import com.example.Billing.customer.Customer_entity;
 import com.example.Billing.invoice.whatsapp.WhatsAppStatus;
@@ -11,6 +12,7 @@ import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,11 +51,10 @@ public class InvoiceService {
         // GET SHOP
         // -------------------------------------------------
 
-        Shop_entity shop =
-                getUserShop(user);
-
-        Long shopId =
-                shop.getId();
+        Long shopId = shopContextResolver.resolveActiveShopId(user);
+        Shop_entity shop = shopRepository.findByIdForUpdate(shopId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"));
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             var existingInvoice = invoiceRepository.findByShopIdAndIdempotencyKey(shopId, idempotencyKey.trim());
@@ -97,11 +98,8 @@ public class InvoiceService {
                                 request.getCustomerId(),
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> new AppException(
+                                HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found"));
 
 
         // -------------------------------------------------
@@ -151,7 +149,7 @@ public class InvoiceService {
 
                         .biller(user)
 
-                        .invoiceNumber(generateInvoiceNumber(shopId))
+                        .invoiceNumber(generateInvoiceNumber(shop))
 
                         .idempotencyKey(idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim())
 
@@ -205,7 +203,8 @@ public class InvoiceService {
             }
 
             Product_entity product = productRepository.findByIdAndShopId(itemRequest.getProductId(), shopId)
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+                    .orElseThrow(() -> new AppException(
+                            HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
 
             if (!product.isActive()) {
                 throw new RuntimeException("Product is inactive: " + product.getName());
@@ -416,11 +415,7 @@ public class InvoiceService {
                                 invoiceId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .orElseThrow(this::invoiceNotFound);
 
 
         return mapToResponse(
@@ -477,11 +472,7 @@ public class InvoiceService {
                                 invoiceId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .orElseThrow(this::invoiceNotFound);
 
 
         // -------------------------------------------------
@@ -552,10 +543,8 @@ public class InvoiceService {
     // =====================================================
 
     private String generateInvoiceNumber(
-            Long shopId
+            Shop_entity lockedShop
     ) {
-        Shop_entity lockedShop = shopRepository.findByIdForUpdate(shopId)
-                .orElseThrow(() -> new RuntimeException("Shop not found"));
         int next = lockedShop.getLastInvoiceNumber() + 1;
         lockedShop.setLastInvoiceNumber(next);
         shopRepository.save(lockedShop);
@@ -566,6 +555,10 @@ public class InvoiceService {
     // =====================================================
     // GET USER SHOP
     // =====================================================
+
+    private AppException invoiceNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found");
+    }
 
     private Shop_entity getUserShop(
             User_entity user

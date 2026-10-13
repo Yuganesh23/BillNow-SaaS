@@ -1,11 +1,13 @@
 package com.example.Billing.product;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import com.example.Billing.supplier.SupplierRepository;
 import com.example.Billing.supplier.Supplier_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,11 +118,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         return mapToResponse(product);
     }
@@ -145,11 +143,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
 
         // Check duplicate SKU
@@ -209,11 +203,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         // Soft delete
         product.setActive(false);
@@ -241,11 +231,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         product.setActive(true);
 
@@ -284,6 +270,10 @@ public class ProductService {
         }
 
         return shopContextResolver.resolveActiveShop(user);
+    }
+
+    private AppException productNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found");
     }
 
 
