@@ -2,6 +2,7 @@ package com.example.Billing.purchase;
 
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.config.ShopContextResolver;
+import com.example.Billing.common.AppException;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
@@ -11,6 +12,7 @@ import com.example.Billing.supplier.SupplierRepository;
 import com.example.Billing.supplier.Supplier_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -38,7 +40,7 @@ public class PurchaseService {
     public PurchaseResponse_Dto getPurchaseById(User_entity user, Long id) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Purchase_entity purchase = purchaseRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Purchase not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PURCHASE_NOT_FOUND", "Purchase not found"));
                 
         PurchaseResponse_Dto response = mapToResponse(purchase);
         
@@ -62,7 +64,7 @@ public class PurchaseService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(request.getSupplierId(), shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SUPPLIER_NOT_FOUND", "Supplier not found"));
                 
         String purchaseNumber = String.format("PUR-%04d", purchaseRepository.countByShopId(shop.getId()) + 1);
         
@@ -82,8 +84,8 @@ public class PurchaseService {
         purchase = purchaseRepository.save(purchase);
         
         for (PurchaseItemRequest_Dto itemReq : request.getItems()) {
-            Product_entity product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            Product_entity product = productRepository.findByIdAndShopId(itemReq.getProductId(), shop.getId())
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
             
             // Stock Update
             product.setStockQuantity(product.getStockQuantity() + itemReq.getQuantity().doubleValue());
@@ -180,10 +182,10 @@ public class PurchaseService {
     public PurchaseResponse_Dto recordPayment(User_entity user, Long id, java.math.BigDecimal amount, String paymentMethod, String notes) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Purchase_entity purchase = purchaseRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Purchase not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PURCHASE_NOT_FOUND", "Purchase not found"));
                 
         if ("PAID".equals(purchase.getStatus())) {
-            throw new RuntimeException("Purchase is already fully paid");
+            throw new AppException(HttpStatus.CONFLICT, "PURCHASE_ALREADY_PAID", "Purchase is already fully paid");
         }
 
         if (purchase.getAmountPaid() == null) {
