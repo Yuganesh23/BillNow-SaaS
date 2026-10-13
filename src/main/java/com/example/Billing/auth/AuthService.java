@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,6 +17,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,9 @@ public class AuthService {
     private final com.example.Billing.notification.EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+
+    @Value("${auth.otp-hmac-secret}")
+    private String otpHmacSecret;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final Duration OTP_LIFETIME = Duration.ofMinutes(5);
@@ -390,8 +396,9 @@ public class AuthService {
 
     private String hashOtp(String email, String otp) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest((email + ":" + otp).getBytes(StandardCharsets.UTF_8));
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(otpHmacSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] digest = mac.doFinal((email + ":" + otp).getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to hash OTP", exception);
