@@ -5,6 +5,7 @@ import com.example.Billing.auth.userRepository;
 import com.example.Billing.config.BranchContextHolder;
 import com.example.Billing.customer.CustomerRepository;
 import com.example.Billing.invoice.CreateInvoiceRequest_Dto;
+import com.example.Billing.invoice.DocumentNumberService;
 import com.example.Billing.invoice.InvoiceItemRequest_Dto;
 import com.example.Billing.invoice.InvoiceRepository;
 import com.example.Billing.invoice.InvoiceResponse_Dto;
@@ -63,11 +64,12 @@ class BillingFlowIntegrationTest {
         InvoiceResponse_Dto result = inTenant(tenant,
                 () -> invoiceService.createInvoice(tenant.owner(), invoiceRequest(tenant, 2.0, "10.00"), "calc-1"));
 
-        assertThat(result.getTaxableAmount()).isEqualByComparingTo("200.00");
-        assertThat(result.getCgstTotal()).isEqualByComparingTo("18.00");
-        assertThat(result.getSgstTotal()).isEqualByComparingTo("18.00");
+        assertThat(result.getTaxableAmount()).isEqualByComparingTo("190.00");
+        assertThat(result.getCgstTotal()).isEqualByComparingTo("17.10");
+        assertThat(result.getSgstTotal()).isEqualByComparingTo("17.10");
         assertThat(result.getIgstTotal()).isEqualByComparingTo("0.00");
-        assertThat(result.getTotalAmount()).isEqualByComparingTo("226.00");
+        assertThat(result.getRoundOff()).isEqualByComparingTo("-0.20");
+        assertThat(result.getTotalAmount()).isEqualByComparingTo("224.00");
     }
 
     @Test
@@ -119,9 +121,10 @@ class BillingFlowIntegrationTest {
                 .map(InvoiceResponse_Dto::getInvoiceNumber)
                 .sorted(Comparator.naturalOrder())
                 .toList();
+        String fy = DocumentNumberService.financialYear(java.time.LocalDate.now());
         assertThat(numbers).containsExactly(
-                "INV-00001", "INV-00002", "INV-00003", "INV-00004",
-                "INV-00005", "INV-00006", "INV-00007", "INV-00008");
+                "INV/" + fy + "/0001", "INV/" + fy + "/0002", "INV/" + fy + "/0003", "INV/" + fy + "/0004",
+                "INV/" + fy + "/0005", "INV/" + fy + "/0006", "INV/" + fy + "/0007", "INV/" + fy + "/0008");
     }
 
     @Test

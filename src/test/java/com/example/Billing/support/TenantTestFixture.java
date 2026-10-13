@@ -9,6 +9,7 @@ import com.example.Billing.customer.Customer_entity;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.product.Product_entity;
 import com.example.Billing.product.TaxType;
+import com.example.Billing.gst.RegistrationType;
 import com.example.Billing.shop.ShopRepository;
 import com.example.Billing.shop.Shop_entity;
 import com.example.Billing.supplier.SupplierRepository;
@@ -66,6 +67,8 @@ public final class TenantTestFixture {
                 .name(label + " Shop")
                 .email(key + "-shop@example.test")
                 .address("Test address")
+                .stateCode("27")
+                .registrationType(RegistrationType.REGULAR)
                 .owner(owner)
                 .active(true)
                 .trialEndsAt(java.time.LocalDateTime.now().plusDays(7))
@@ -97,6 +100,8 @@ public final class TenantTestFixture {
                 .shop(shop)
                 .businessName(label + " Supplier")
                 .phone("800000" + String.format("%04d", suffix))
+                .gstin("27AAPFU0939F1ZV")
+                .stateCode("27")
                 .build());
 
         BranchContextHolder.setBranchId(shop.getId());

@@ -10,6 +10,8 @@ import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.example.Billing.gst.GstinValidator;
+import com.example.Billing.gst.IndianState;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +46,7 @@ public class CustomerService {
             );
         }
 
+        String stateCode = resolveStateCode(request.getGstin(), request.getStateCode(), shop.getStateCode());
         Customer_entity customer =
                 Customer_entity.builder()
                         .shop(shop)
@@ -53,6 +56,10 @@ public class CustomerService {
                         )
                         .email(request.getEmail())
                         .address(request.getAddress())
+                        .gstin(normalizeGstin(request.getGstin()))
+                        .stateCode(stateCode)
+                        .billingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress())
+                        .shippingAddress(request.getShippingAddress())
                         .build();
 
         Customer_entity savedCustomer =
@@ -161,6 +168,10 @@ public class CustomerService {
         customer.setAddress(
                 request.getAddress()
         );
+        customer.setGstin(normalizeGstin(request.getGstin()));
+        customer.setStateCode(resolveStateCode(request.getGstin(), request.getStateCode(), shop.getStateCode()));
+        customer.setBillingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress());
+        customer.setShippingAddress(request.getShippingAddress());
 
         Customer_entity updatedCustomer =
                 customerRepository.save(customer);
@@ -264,7 +275,29 @@ public class CustomerService {
                 .address(
                         customer.getAddress()
                 )
+                .gstin(customer.getGstin())
+                .stateCode(customer.getStateCode())
+                .billingAddress(customer.getBillingAddress())
+                .shippingAddress(customer.getShippingAddress())
 
                 .build();
+    }
+
+    private String normalizeGstin(String gstin) {
+        if (gstin == null || gstin.isBlank()) return null;
+        String normalized = gstin.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!GstinValidator.isValid(normalized)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_GSTIN", "GSTIN is invalid");
+        }
+        return normalized;
+    }
+
+    private String resolveStateCode(String gstin, String manual, String fallback) {
+        if (gstin != null && !gstin.isBlank()) return GstinValidator.stateCode(normalizeGstin(gstin));
+        String code = manual != null && !manual.isBlank() ? manual : fallback;
+        if (IndianState.fromCode(code).isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STATE_CODE", "Select a valid Indian state or UT");
+        }
+        return code;
     }
 }

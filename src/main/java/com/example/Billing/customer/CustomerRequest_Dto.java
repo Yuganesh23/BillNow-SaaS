@@ -19,4 +19,10 @@ public class CustomerRequest_Dto {
     private String email;
 
     private String address;
+    @Size(max = 15)
+    private String gstin;
+    @Pattern(regexp = "[0-9]{2}", message = "State code must contain two digits")
+    private String stateCode;
+    private String billingAddress;
+    private String shippingAddress;
 }

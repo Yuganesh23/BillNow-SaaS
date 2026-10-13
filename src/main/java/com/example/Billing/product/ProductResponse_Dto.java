@@ -40,5 +40,7 @@ public class ProductResponse_Dto {
     private String hsnCode;
     private BigDecimal gstRate;
     private TaxType taxType;
+    private String uqc;
+    private BigDecimal cessRate;
 }
 

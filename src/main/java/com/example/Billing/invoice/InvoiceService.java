@@ -9,6 +9,9 @@ import com.example.Billing.customer.Customer_entity;
 import com.example.Billing.invoice.whatsapp.WhatsAppStatus;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.product.Product_entity;
+import com.example.Billing.gst.GstinValidator;
+import com.example.Billing.gst.IndianAmountInWords;
+import com.example.Billing.gst.TaxCalculationService;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +39,8 @@ public class InvoiceService {
     private final ShopContextResolver shopContextResolver;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
+    private final TaxCalculationService taxCalculationService;
+    private final DocumentNumberService documentNumberService;
 
 
     // =====================================================
@@ -113,13 +119,8 @@ public class InvoiceService {
             discount = BigDecimal.ZERO;
         }
 
-        if (discount.compareTo(
-                BigDecimal.ZERO
-        ) < 0) {
-
-            throw new RuntimeException(
-                    "Discount cannot be negative"
-            );
+        if (discount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_DISCOUNT", "Discount cannot be negative");
         }
 
 
@@ -130,10 +131,11 @@ public class InvoiceService {
         if (request.getItems() == null ||
                 request.getItems().isEmpty()) {
 
-            throw new RuntimeException(
-                    "Invoice must contain at least one item"
-            );
+            throw new AppException(HttpStatus.BAD_REQUEST, "DOCUMENT_ITEMS_REQUIRED", "Invoice must contain at least one item");
         }
+
+        DocumentNumberService.NumberedDocument documentNumber = documentNumberService.next(
+                shop, "TAX_INVOICE", shop.getInvoicePrefix(), LocalDate.now());
 
 
         // -------------------------------------------------
@@ -149,7 +151,9 @@ public class InvoiceService {
 
                         .biller(user)
 
-                        .invoiceNumber(generateInvoiceNumber(shop))
+                        .invoiceNumber(documentNumber.number())
+                        .financialYear(documentNumber.financialYear())
+                        .seriesNumber(documentNumber.sequence())
 
                         .idempotencyKey(idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim())
 
@@ -180,26 +184,15 @@ public class InvoiceService {
                         .build();
 
 
-        BigDecimal subtotal =
-                BigDecimal.ZERO;
-
-
-        // =================================================
-        // PROCESS ITEMS
-        // =================================================
-
-        BigDecimal totalTaxableAmount = BigDecimal.ZERO;
-        BigDecimal totalCgst = BigDecimal.ZERO;
-        BigDecimal totalSgst = BigDecimal.ZERO;
-        BigDecimal totalIgst = BigDecimal.ZERO;
-
+        List<Product_entity> products = new ArrayList<>();
+        List<TaxCalculationService.LineInput> taxLines = new ArrayList<>();
         for (InvoiceItemRequest_Dto itemRequest : request.getItems()) {
             if (itemRequest == null || itemRequest.getProductId() == null) {
-                throw new RuntimeException("Product ID is required");
+                throw new AppException(HttpStatus.BAD_REQUEST, "PRODUCT_REQUIRED", "Product ID is required");
             }
             Double requestedQuantity = itemRequest.getQuantity();
             if (requestedQuantity == null || requestedQuantity <= 0.0) {
-                throw new RuntimeException("Quantity must be greater than zero");
+                throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_QUANTITY", "Quantity must be greater than zero");
             }
 
             Product_entity product = productRepository.findByIdAndShopId(itemRequest.getProductId(), shopId)
@@ -207,95 +200,47 @@ public class InvoiceService {
                             HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
 
             if (!product.isActive()) {
-                throw new RuntimeException("Product is inactive: " + product.getName());
+                throw new AppException(HttpStatus.CONFLICT, "PRODUCT_INACTIVE", "Product is inactive: " + product.getName());
             }
-
-            BigDecimal unitPrice = product.getSellingPrice();
-            BigDecimal enteredLineTotal = unitPrice.multiply(BigDecimal.valueOf(requestedQuantity));
-            
-            BigDecimal itemBaseAmount = enteredLineTotal;
-            BigDecimal itemTaxAmount = BigDecimal.ZERO;
-
-            if (product.getGstRate() != null && product.getGstRate().compareTo(BigDecimal.ZERO) > 0) {
-                if (product.getTaxType() == com.example.Billing.product.TaxType.INCLUSIVE) {
-                    BigDecimal divisor = BigDecimal.ONE.add(product.getGstRate().divide(new BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP));
-                    itemBaseAmount = enteredLineTotal.divide(divisor, 2, java.math.RoundingMode.HALF_UP);
-                    itemTaxAmount = enteredLineTotal.subtract(itemBaseAmount);
-                } else if (product.getTaxType() == com.example.Billing.product.TaxType.EXCLUSIVE) {
-                    itemTaxAmount = enteredLineTotal.multiply(product.getGstRate()).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-                    itemBaseAmount = enteredLineTotal;
-                }
-            }
-
-            BigDecimal itemCgst = BigDecimal.ZERO;
-            BigDecimal itemSgst = BigDecimal.ZERO;
-            BigDecimal itemIgst = BigDecimal.ZERO;
-
-            if (request.getIsInterState() != null && request.getIsInterState()) {
-                itemIgst = itemTaxAmount;
-            } else {
-                itemCgst = itemTaxAmount.divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP);
-                itemSgst = itemTaxAmount.subtract(itemCgst);
-            }
-
-            totalTaxableAmount = totalTaxableAmount.add(itemBaseAmount);
-            totalCgst = totalCgst.add(itemCgst);
-            totalSgst = totalSgst.add(itemSgst);
-            totalIgst = totalIgst.add(itemIgst);
-
-            InvoiceItem invoiceItem = InvoiceItem.builder()
-                    .invoice(invoice)
-                    .product(product)
-                    .quantity(requestedQuantity)
-                    .unitPrice(unitPrice)
-                    .totalPrice(enteredLineTotal)
-                    .taxableAmount(itemBaseAmount)
-                    .cgst(itemCgst)
-                    .sgst(itemSgst)
-                    .igst(itemIgst)
-                    .gstRate(product.getGstRate() != null ? product.getGstRate() : BigDecimal.ZERO)
-                    .build();
-
-            invoice.getItems().add(invoiceItem);
-            subtotal = subtotal.add(itemBaseAmount).add(itemTaxAmount);
-
-            int updated = productRepository.reduceStock(product.getId(), shopId, requestedQuantity);
-            if (updated == 0) {
-                throw new RuntimeException("Insufficient stock or concurrency conflict for product: " + product.getName());
-            }
+            products.add(product);
+            taxLines.add(new TaxCalculationService.LineInput(String.valueOf(product.getId()),
+                    BigDecimal.valueOf(requestedQuantity), product.getSellingPrice(), product.getTaxType(),
+                    product.getGstRate(), product.getCessRate(), itemRequest.getLineDiscount()));
         }
 
-        // =================================================
-        // VALIDATE DISCOUNT
-        // =================================================
+        String destinationState = customer.getGstin() != null && GstinValidator.isValid(customer.getGstin())
+                ? GstinValidator.stateCode(customer.getGstin()) : customer.getStateCode();
+        TaxCalculationService.Calculation calculation = taxCalculationService.calculate(
+                new TaxCalculationService.Request(shop.getStateCode(), destinationState,
+                        shop.getRegistrationType(), discount, taxLines));
 
-        if (discount.compareTo(
-                subtotal
-        ) > 0) {
-
-            throw new RuntimeException(
-                    "Discount cannot be greater than subtotal"
-            );
+        for (int index = 0; index < products.size(); index++) {
+            Product_entity product = products.get(index);
+            InvoiceItemRequest_Dto itemRequest = request.getItems().get(index);
+            TaxCalculationService.LineResult result = calculation.lines().get(index);
+            BigDecimal quantity = BigDecimal.valueOf(itemRequest.getQuantity());
+            invoice.getItems().add(InvoiceItem.builder().invoice(invoice).product(product)
+                    .quantity(itemRequest.getQuantity()).unitPrice(product.getSellingPrice())
+                    .totalPrice(result.total()).taxableAmount(result.taxableAmount())
+                    .cgst(result.cgst()).sgst(result.sgst()).igst(result.igst()).cess(result.cess())
+                    .lineDiscount(itemRequest.getLineDiscount() == null ? BigDecimal.ZERO : itemRequest.getLineDiscount())
+                    .gstRate(product.getGstRate() == null ? BigDecimal.ZERO : product.getGstRate()).build());
+            int updated = productRepository.reduceStock(product.getId(), shopId, quantity.doubleValue());
+            if (updated == 0) throw new AppException(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK",
+                    "Insufficient stock or concurrent update for product: " + product.getName());
         }
 
-
-        // =================================================
-        // CALCULATE TOTAL
-        // =================================================
-
-        BigDecimal totalAmount =
-                subtotal.subtract(
-                        discount
-                );
-
-
-        invoice.setSubtotal(totalTaxableAmount);
-        invoice.setTaxableAmount(totalTaxableAmount);
-        invoice.setCgstTotal(totalCgst);
-        invoice.setSgstTotal(totalSgst);
-        invoice.setIgstTotal(totalIgst);
-        invoice.setTotalAmount(totalTaxableAmount.add(totalCgst).add(totalSgst).add(totalIgst).subtract(discount));
-        invoice.setIsInterState(request.getIsInterState() != null ? request.getIsInterState() : false);
+        invoice.setSubtotal(calculation.taxableAmount());
+        invoice.setTaxableAmount(calculation.taxableAmount());
+        invoice.setCgstTotal(calculation.cgst());
+        invoice.setSgstTotal(calculation.sgst());
+        invoice.setIgstTotal(calculation.igst());
+        invoice.setCessTotal(calculation.cess());
+        invoice.setRoundOff(calculation.roundOff());
+        invoice.setTotalAmount(calculation.total());
+        invoice.setIsInterState(calculation.interState());
+        invoice.setPlaceOfSupplyCode(calculation.placeOfSupplyCode());
+        invoice.setDocumentType(calculation.billOfSupply() ? "BILL_OF_SUPPLY" : "TAX_INVOICE");
 
 
         // =================================================
@@ -542,16 +487,6 @@ public class InvoiceService {
     // GENERATE INVOICE NUMBER
     // =====================================================
 
-    private String generateInvoiceNumber(
-            Shop_entity lockedShop
-    ) {
-        int next = lockedShop.getLastInvoiceNumber() + 1;
-        lockedShop.setLastInvoiceNumber(next);
-        shopRepository.save(lockedShop);
-        return String.format("INV-%05d", next);
-    }
-
-
     // =====================================================
     // GET USER SHOP
     // =====================================================
@@ -649,6 +584,8 @@ public class InvoiceService {
                                         .cgst(item.getCgst())
                                         .sgst(item.getSgst())
                                         .igst(item.getIgst())
+                                        .cess(item.getCess())
+                                        .lineDiscount(item.getLineDiscount())
                                         .gstRate(item.getGstRate())
 
                                         .build()
@@ -671,6 +608,11 @@ public class InvoiceService {
                 .cgstTotal(invoice.getCgstTotal())
                 .sgstTotal(invoice.getSgstTotal())
                 .igstTotal(invoice.getIgstTotal())
+                .cessTotal(invoice.getCessTotal())
+                .roundOff(invoice.getRoundOff())
+                .placeOfSupplyCode(invoice.getPlaceOfSupplyCode())
+                .documentType(invoice.getDocumentType())
+                .amountInWords(IndianAmountInWords.rupees(invoice.getTotalAmount()))
                 .isInterState(invoice.getIsInterState())
                 .status(invoice.getStatus())
                 .createdAt(invoice.getCreatedAt())

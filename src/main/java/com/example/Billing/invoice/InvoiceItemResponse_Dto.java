@@ -21,5 +21,7 @@ public class InvoiceItemResponse_Dto {
     private BigDecimal cgst;
     private BigDecimal sgst;
     private BigDecimal igst;
+    private BigDecimal cess;
+    private BigDecimal lineDiscount;
     private BigDecimal gstRate;
 }

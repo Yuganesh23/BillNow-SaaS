@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.example.Billing.gst.GstinValidator;
+import com.example.Billing.gst.IndianState;
+import com.example.Billing.gst.RegistrationType;
 
 @RestController
 @RequestMapping("/api/shops")
@@ -38,12 +41,16 @@ public class ShopController {
         User_entity userDetails = (User_entity) authentication.getPrincipal();
         User_entity owner = userRepository.findById(userDetails.getId()).orElseThrow();
 
+        String stateCode = resolveStateCode(request.getGstin(), request.getStateCode());
         Shop_entity newShop = Shop_entity.builder()
                 .name(request.getName())
                 .invoiceName(request.getInvoiceName())
                 .email(request.getEmail())
                 .mobileNumber(request.getMobileNumber())
-                .gstin(request.getGstin())
+                .gstin(normalizeGstin(request.getGstin()))
+                .stateCode(stateCode)
+                .registrationType(request.getRegistrationType() == null ? RegistrationType.UNREGISTERED : request.getRegistrationType())
+                .hsnCodeLength(request.getHsnCodeLength() == null ? 4 : validHsnLength(request.getHsnCodeLength()))
                 .legalName(request.getLegalName())
                 .state(request.getState())
                 .address(request.getAddress())
@@ -71,9 +78,21 @@ public class ShopController {
         if (request.getInvoiceName() != null) shop.setInvoiceName(request.getInvoiceName());
         if (request.getEmail() != null) shop.setEmail(request.getEmail());
         if (request.getMobileNumber() != null) shop.setMobileNumber(request.getMobileNumber());
-        if (request.getGstin() != null) shop.setGstin(request.getGstin());
+        if (request.getGstin() != null) {
+            shop.setGstin(normalizeGstin(request.getGstin()));
+            if (!request.getGstin().isBlank()) shop.setStateCode(GstinValidator.stateCode(request.getGstin()));
+        }
         if (request.getLegalName() != null) shop.setLegalName(request.getLegalName());
         if (request.getState() != null) shop.setState(request.getState());
+        if (request.getStateCode() != null && (request.getGstin() == null || request.getGstin().isBlank())) {
+            shop.setStateCode(resolveStateCode(null, request.getStateCode()));
+        }
+        if (request.getRegistrationType() != null) shop.setRegistrationType(request.getRegistrationType());
+        if (request.getHsnCodeLength() != null) shop.setHsnCodeLength(validHsnLength(request.getHsnCodeLength()));
+        if (request.getInvoicePrefix() != null) shop.setInvoicePrefix(request.getInvoicePrefix());
+        if (request.getBankDetails() != null) shop.setBankDetails(request.getBankDetails());
+        if (request.getInvoiceTerms() != null) shop.setInvoiceTerms(request.getInvoiceTerms());
+        if (request.getUpiId() != null) shop.setUpiId(request.getUpiId());
         if (request.getAddress() != null) shop.setAddress(request.getAddress());
         if (request.getLogoBase64() != null && !request.getLogoBase64().isBlank()) {
             shop.setLogoBase64(request.getLogoBase64());
@@ -85,6 +104,24 @@ public class ShopController {
         }
 
         return ResponseEntity.ok(shopRepository.save(shop));
+    }
+
+    private String normalizeGstin(String gstin) {
+        if (gstin == null || gstin.isBlank()) return null;
+        String value = gstin.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!GstinValidator.isValid(value)) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_GSTIN", "GSTIN is invalid");
+        return value;
+    }
+
+    private String resolveStateCode(String gstin, String stateCode) {
+        if (gstin != null && !gstin.isBlank()) return GstinValidator.stateCode(normalizeGstin(gstin));
+        if (IndianState.fromCode(stateCode).isEmpty()) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STATE_CODE", "Select a valid Indian state or UT");
+        return stateCode;
+    }
+
+    private int validHsnLength(int value) {
+        if (value != 4 && value != 6 && value != 8) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_HSN_LENGTH", "HSN length must be 4, 6, or 8");
+        return value;
     }
 
     @PreAuthorize("hasRole('SHOP_OWNER')")
@@ -130,6 +167,13 @@ class ShopUpdateRequest {
     private String address;
     private String logoBase64;
     private String logoObjectKey;
+    private String stateCode;
+    private RegistrationType registrationType;
+    private Integer hsnCodeLength;
+    private String invoicePrefix;
+    private String bankDetails;
+    private String invoiceTerms;
+    private String upiId;
 }
 
 @lombok.Data
@@ -142,4 +186,7 @@ class ShopCreateRequest {
     private String legalName;
     private String state;
     private String address;
+    private String stateCode;
+    private RegistrationType registrationType;
+    private Integer hsnCodeLength;
 }

@@ -30,6 +30,7 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import com.example.Billing.gst.IndianAmountInWords;
 
 @Service
 @RequiredArgsConstructor
@@ -122,7 +123,13 @@ public class InvoicePdfService {
             rightHeader.setBorder(Rectangle.NO_BORDER);
             rightHeader.setHorizontalAlignment(Element.ALIGN_RIGHT);
             
-            Paragraph title = new Paragraph("INVOICE", titleFont);
+            String documentTitle = switch (safe(invoice.getDocumentType())) {
+                case "BILL_OF_SUPPLY" -> "BILL OF SUPPLY";
+                case "CREDIT_NOTE" -> "CREDIT NOTE";
+                case "DEBIT_NOTE" -> "DEBIT NOTE";
+                default -> "TAX INVOICE";
+            };
+            Paragraph title = new Paragraph(documentTitle, titleFont);
             title.setAlignment(Element.ALIGN_RIGHT);
             rightHeader.addElement(title);
             
@@ -137,6 +144,9 @@ public class InvoicePdfService {
             Paragraph statusPara = new Paragraph("Status: " + safe(invoice.getStatus() != null ? invoice.getStatus().name() : ""), boldFont);
             statusPara.setAlignment(Element.ALIGN_RIGHT);
             rightHeader.addElement(statusPara);
+            Paragraph place = new Paragraph("Place of supply: " + safe(invoice.getPlaceOfSupplyCode()), smallFont);
+            place.setAlignment(Element.ALIGN_RIGHT);
+            rightHeader.addElement(place);
 
             headerTable.addCell(rightHeader);
             document.add(headerTable);
@@ -269,11 +279,18 @@ public class InvoicePdfService {
                     addCalculationRow(calcTable, "CGST Total", "+ " + formatMoney(invoice.getCgstTotal()), normalFont, false);
                     addCalculationRow(calcTable, "SGST Total", "+ " + formatMoney(invoice.getSgstTotal()), normalFont, true);
                 }
+                if (invoice.getCessTotal() != null && invoice.getCessTotal().compareTo(BigDecimal.ZERO) != 0) {
+                    addCalculationRow(calcTable, "Cess Total", "+ " + formatMoney(invoice.getCessTotal()), normalFont, false);
+                }
             } else {
                 addCalculationRow(calcTable, "Subtotal", formatMoney(invoice.getSubtotal()), normalFont, false);
                 if (invoice.getDiscountAmount() != null && invoice.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
                     addCalculationRow(calcTable, "Discount", "- " + formatMoney(invoice.getDiscountAmount()), normalFont, true);
                 }
+            }
+
+            if (invoice.getRoundOff() != null && invoice.getRoundOff().compareTo(BigDecimal.ZERO) != 0) {
+                addCalculationRow(calcTable, "Round off", formatMoney(invoice.getRoundOff()), normalFont, false);
             }
 
             addCalculationRow(calcTable, "GRAND TOTAL", formatMoney(invoice.getTotalAmount()), totalFont, false);
@@ -283,6 +300,14 @@ public class InvoicePdfService {
             totalsTable.addCell(totalsWrapper);
 
             document.add(totalsTable);
+
+            document.add(new Paragraph("Amount in words: " + IndianAmountInWords.rupees(invoice.getTotalAmount()), boldFont));
+            if (shop.getBankDetails() != null && !shop.getBankDetails().isBlank()) {
+                document.add(new Paragraph("Bank details: " + shop.getBankDetails(), smallFont));
+            }
+            if (shop.getInvoiceTerms() != null && !shop.getInvoiceTerms().isBlank()) {
+                document.add(new Paragraph("Terms: " + shop.getInvoiceTerms(), smallFont));
+            }
 
             // =================================================
             // FOOTER
@@ -302,7 +327,7 @@ public class InvoicePdfService {
             return outputStream.toByteArray();
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate invoice PDF", e);
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate invoice PDF");
         }
     }
 

@@ -21,5 +21,7 @@ public class InvoiceItemRequest_Dto {
     private java.math.BigDecimal sgst;
     private java.math.BigDecimal igst;
     private java.math.BigDecimal gstRate;
+    @DecimalMin(value = "0.0", inclusive = true)
+    private java.math.BigDecimal lineDiscount;
 }
 

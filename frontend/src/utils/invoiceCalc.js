@@ -1,94 +1,50 @@
-﻿export const calculateInvoiceTotals = (
-  items, 
-  discountAmount = 0, 
-  discountType = 'AMOUNT', 
-  shopState = '', 
-  customerState = ''
+// UI preview only. The backend remains authoritative and returns persisted totals.
+const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+export const calculateInvoiceTotals = (
+  items, discountAmount = 0, discountType = 'AMOUNT', shopState = '', customerState = '', registrationType = 'REGULAR'
 ) => {
-  let subtotal = 0;
-  let taxableAmountTotal = 0;
-  let cgstTotal = 0;
-  let sgstTotal = 0;
-  let igstTotal = 0;
-
-  // Normalise states for comparison
-  const sState = (shopState || '').trim().toLowerCase();
-  const cState = (customerState || '').trim().toLowerCase();
-  const isInterState = sState !== cState && cState !== '';
-
-  const calculatedItems = items.map(item => {
-    const price = parseFloat(item.product?.sellingPrice || 0);
-    const quantity = parseFloat(item.quantity || 0);
-    const grossItemTotal = price * quantity;
-    
-    subtotal += grossItemTotal;
-
-    const gstRate = parseFloat(item.product?.gstRate || 0);
-    const taxType = item.product?.taxType || 'NONE';
-
-    let itemTaxable = grossItemTotal;
-    let itemTotalTax = 0;
-
-    if (taxType === 'EXCLUSIVE' && gstRate > 0) {
-      itemTaxable = grossItemTotal;
-      itemTotalTax = itemTaxable * (gstRate / 100);
-    } else if (taxType === 'INCLUSIVE' && gstRate > 0) {
-      // Base = Gross / (1 + Rate)
-      itemTaxable = grossItemTotal / (1 + (gstRate / 100));
-      itemTotalTax = grossItemTotal - itemTaxable;
-    }
-
-    let cgst = 0, sgst = 0, igst = 0;
-    if (itemTotalTax > 0) {
-      if (isInterState) {
-        igst = itemTotalTax;
-      } else {
-        cgst = itemTotalTax / 2;
-        sgst = itemTotalTax / 2;
-      }
-    }
-
-    taxableAmountTotal += itemTaxable;
-    cgstTotal += cgst;
-    sgstTotal += sgst;
-    igstTotal += igst;
-
-    return {
-      ...item,
-      itemSubtotal: grossItemTotal,
-      taxableAmount: itemTaxable,
-      cgst,
-      sgst,
-      igst,
-      gstRate
-    };
+  const destination = String(customerState || shopState).trim();
+  const seller = String(shopState).trim();
+  const isInterState = seller !== destination;
+  const billOfSupply = registrationType === 'COMPOSITION' || registrationType === 'UNREGISTERED';
+  const prepared = items.map((item) => {
+    const price = Number(item.product?.sellingPrice || 0);
+    const quantity = Number(item.quantity || 0);
+    const gstRate = Number(item.product?.gstRate || 0);
+    const cessRate = Number(item.product?.cessRate || 0);
+    const lineDiscount = money(item.lineDiscount || 0);
+    const gross = money(price * quantity - lineDiscount);
+    const inclusive = item.product?.taxType === 'INCLUSIVE' && gstRate + cessRate > 0;
+    const taxableBeforeInvoiceDiscount = inclusive ? money((gross * 100) / (100 + gstRate + cessRate)) : gross;
+    return { item, price, quantity, gstRate, cessRate, taxableBeforeInvoiceDiscount };
   });
-
-  const discountInput = parseFloat(discountAmount) || 0;
-  let finalDiscount = 0;
-
-  // Discount applies to Subtotal (before tax) or after tax? 
-  // Standard simple billing applies discount to the final grand total, OR proportionally.
-  // We will apply it to the final computed total for simplicity in this MVP.
-  let preDiscountTotal = taxableAmountTotal + cgstTotal + sgstTotal + igstTotal;
-
-  if (discountType === 'PERCENTAGE') {
-    finalDiscount = (preDiscountTotal * discountInput) / 100;
-  } else {
-    finalDiscount = discountInput;
-  }
-
-  const totalAmount = preDiscountTotal - finalDiscount;
-
-  return {
-    items: calculatedItems,
-    subtotal,
-    taxableAmount: taxableAmountTotal,
-    cgstTotal,
-    sgstTotal,
-    igstTotal,
-    isInterState,
-    discountAmount: finalDiscount,
-    totalAmount: Math.max(totalAmount, 0)
-  };
+  const grossTaxable = money(prepared.reduce((sum, line) => sum + line.taxableBeforeInvoiceDiscount, 0));
+  const requestedDiscount = Number(discountAmount) || 0;
+  const finalDiscount = money(discountType === 'PERCENTAGE' ? grossTaxable * requestedDiscount / 100 : requestedDiscount);
+  let allocated = 0;
+  const calculatedItems = prepared.map((line, index) => {
+    const discountAllocated = index === prepared.length - 1 ? money(finalDiscount - allocated)
+      : money(grossTaxable === 0 ? 0 : finalDiscount * line.taxableBeforeInvoiceDiscount / grossTaxable);
+    allocated = money(allocated + discountAllocated);
+    const taxableAmount = money(line.taxableBeforeInvoiceDiscount - discountAllocated);
+    const gst = billOfSupply ? 0 : money(taxableAmount * line.gstRate / 100);
+    const cess = billOfSupply ? 0 : money(taxableAmount * line.cessRate / 100);
+    const cgst = isInterState ? 0 : money(gst / 2);
+    const sgst = isInterState ? 0 : money(gst - cgst);
+    const igst = isInterState ? gst : 0;
+    return { ...line.item, itemSubtotal: money(line.price * line.quantity), taxableAmount,
+      discountAllocated, cgst, sgst, igst, cess, gstRate: line.gstRate };
+  });
+  const sum = (key) => money(calculatedItems.reduce((total, item) => total + item[key], 0));
+  const taxableAmount = sum('taxableAmount');
+  const cgstTotal = sum('cgst');
+  const sgstTotal = sum('sgst');
+  const igstTotal = sum('igst');
+  const cessTotal = sum('cess');
+  const unrounded = money(taxableAmount + cgstTotal + sgstTotal + igstTotal + cessTotal);
+  const totalAmount = Math.round(unrounded);
+  return { items: calculatedItems, subtotal: grossTaxable, taxableAmount, cgstTotal, sgstTotal,
+    igstTotal, cessTotal, isInterState, billOfSupply, discountAmount: finalDiscount,
+    roundOff: money(totalAmount - unrounded), totalAmount: money(Math.max(totalAmount, 0)) };
 };

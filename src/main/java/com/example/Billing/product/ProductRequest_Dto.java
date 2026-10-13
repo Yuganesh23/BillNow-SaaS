@@ -45,4 +45,7 @@ public class ProductRequest_Dto {
     private String hsnCode;
     private BigDecimal gstRate;
     private TaxType taxType;
+    private String uqc;
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal cessRate;
 }

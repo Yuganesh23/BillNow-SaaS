@@ -23,6 +23,7 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
     private final InvoicePdfService invoicePdfService;
     private final WhatsAppService whatsAppService;
+    private final DocumentNoteService documentNoteService;
 
 
     // =====================================================
@@ -58,6 +59,21 @@ public class InvoiceController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    @PostMapping("/{invoiceId}/notes")
+    public ResponseEntity<DocumentNoteService.NoteResponse> createNote(Authentication authentication,
+            @PathVariable Long invoiceId, @RequestBody DocumentNoteService.NoteRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(documentNoteService.create(
+                getAuthenticatedUser(authentication), invoiceId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @GetMapping("/{invoiceId}/notes")
+    public ResponseEntity<List<DocumentNoteService.NoteResponse>> listNotes(Authentication authentication,
+            @PathVariable Long invoiceId) {
+        return ResponseEntity.ok(documentNoteService.list(getAuthenticatedUser(authentication), invoiceId));
     }
 
 

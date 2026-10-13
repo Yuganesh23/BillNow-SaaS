@@ -19,4 +19,8 @@ public class CustomerResponse_Dto {
     private String email;
 
     private String address;
+    private String gstin;
+    private String stateCode;
+    private String billingAddress;
+    private String shippingAddress;
 }

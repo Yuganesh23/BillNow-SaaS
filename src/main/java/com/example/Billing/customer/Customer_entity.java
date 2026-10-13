@@ -47,6 +47,15 @@ public class Customer_entity {
     @Column(length = 100)
     private String state;
 
+    @Column(name = "state_code", length = 2)
+    private String stateCode;
+
+    @Column(name = "billing_address", length = 500)
+    private String billingAddress;
+
+    @Column(name = "shipping_address", length = 500)
+    private String shippingAddress;
+
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;
 
