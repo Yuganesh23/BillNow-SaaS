@@ -69,7 +69,7 @@ export default function Settings() {
         userMobile: userProfile.mobileNumber
       });
       alert('Profile updated successfully!');
-    } catch (e) {
+    } catch  {
       alert('Failed to update profile.');
     } finally {
       setSavingUser(false);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getBillers, createBiller, deactivateBiller, updateBiller } from '../api/billerApi';
 import { EmptyState, LoadingState } from '../components/common/States';
-import { UserCog, Plus, Search, UserMinus, Edit2 } from 'lucide-react';
+import { UserCog, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Billers() {
@@ -20,7 +20,7 @@ export default function Billers() {
       setLoading(true);
       const data = await getBillers();
       setBillers(data);
-    } catch (err) {
+    } catch  {
       setError('Failed to fetch billers');
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export default function Billers() {
       try {
         await deactivateBiller(id);
         fetchBillers();
-      } catch (err) {
+      } catch  {
         alert('Failed to deactivate biller');
       }
     }

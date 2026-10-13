@@ -7,7 +7,6 @@ import {
   FileText, 
   Users, 
   Package,
-  TrendingUp,
   Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -32,7 +31,7 @@ export default function Dashboard() {
       try {
         const response = await getDashboardData();
         setData(response);
-      } catch (err) {
+      } catch  {
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);

@@ -41,17 +41,7 @@ export default function PurchaseDetails() {
     }
   };
 
-  const handleMarkPaid = async () => {
-    try {
-      setLoading(true);
-      await markPurchasePaid(id);
-      await fetchPurchase();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to mark as paid');
-      setLoading(false);
-    }
-  };
+
 
   if (loading) return <LoadingState />;
   if (!purchase) return <div className="p-8 text-red-500">Purchase not found.</div>;

@@ -7,7 +7,7 @@ import { Users, Plus, Search, Edit2, Trash2, Phone } from 'lucide-react';
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [,setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +21,7 @@ export default function Customers() {
     try {
       const data = await getCustomers();
       setCustomers(data);
-    } catch (err) {
+    } catch  {
       setError('Failed to load customers');
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function Customers() {
       try {
         await deleteCustomer(id);
         fetchCustomers();
-      } catch (err) {
+      } catch  {
         alert('Failed to delete customer');
       }
     }

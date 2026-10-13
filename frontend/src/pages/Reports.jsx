@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, Tag, CreditCard, Smartphone, Banknote, ArrowRight, X } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, ArrowRight, X } from 'lucide-react';
 import { getSalesReport, getProductsReport, getCustomersReport, getPaymentsReport, getNewCustomersReport } from '../api/reportApi';
 
 export default function Reports() {

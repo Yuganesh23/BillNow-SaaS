@@ -168,7 +168,7 @@ export default function Products() {
       setFormData(prev => ({ ...prev, supplierId: res.data.id }));
       setShowAddSupplier(false);
       setNewSupplierName('');
-    } catch(err) { alert('Failed to create supplier'); }
+    } catch { alert('Failed to create supplier'); }
   };
 
   const initScanner = () => {

@@ -37,7 +37,7 @@ export default function CreateInvoice() {
       setSelectedCustomerId(added.id);
       setShowCustomerModal(false);
       setNewCustomer({ name: '', whatsappNumber: '', email: '' });
-    } catch(err) {
+    } catch {
       alert('Failed to add customer');
     }
     setIsAddingCustomer(false);
@@ -49,7 +49,7 @@ export default function CreateInvoice() {
         const [custData, prodData] = await Promise.all([getCustomers(), getProducts()]);
         setCustomers(custData);
         setProducts(prodData);
-      } catch (err) {
+      } catch  {
         console.error('Failed to load initial data');
       }
     };
@@ -144,7 +144,7 @@ export default function CreateInvoice() {
           });
         }
         navigate(`/invoices/${response.id}`);
-    } catch (err) {
+    } catch  {
       alert('Failed to create invoice');
       setIsSubmitting(false);
     }

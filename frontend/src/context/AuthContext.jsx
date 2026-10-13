@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await loginApi({ email, password });
-      const { token, ...userData } = response.data || response;
+      const { token: _token, ...userData } = response.data || response;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       return true;

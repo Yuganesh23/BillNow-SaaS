@@ -5,7 +5,7 @@ import { getProducts, createProduct } from '../api/productApi';
 import { createPurchase } from '../api/purchaseApi';
 import { LoadingState } from '../components/common/States';
 import { ArrowLeft, Plus, Trash2, Save, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
 
 export default function PurchaseForm() {
   const navigate = useNavigate();
@@ -37,14 +37,14 @@ export default function PurchaseForm() {
     try {
       const res = await getSuppliers();
       setSuppliers(res.data);
-    } catch(err){}
+    } catch{}
   };
   
   const loadProducts = async () => {
     try {
       const res = await getProducts();
       setProducts(Array.isArray(res) ? res : (res.data || []));
-    } catch(err){}
+    } catch{}
   };
 
   
@@ -56,7 +56,7 @@ export default function PurchaseForm() {
       setSupplierId(res.data.id);
       setShowAddSupplier(false);
       setNewSupplierName('');
-    } catch(err) { alert('Failed to create supplier'); }
+    } catch { alert('Failed to create supplier'); }
   };
   
   const handleQuickAddProduct = async (e) => {
@@ -77,7 +77,7 @@ export default function PurchaseForm() {
       setShowAddProduct(false);
       setNewProductName('');
       setNewProductPrice('');
-    } catch(err) { alert('Failed to create product'); }
+    } catch { alert('Failed to create product'); }
   };
 
   useEffect(() => {
