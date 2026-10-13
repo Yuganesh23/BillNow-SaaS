@@ -40,6 +40,8 @@ public class InvoicePdfService {
     private final ShopContextResolver shopContextResolver;
     private final PaymentRepository paymentRepository;
     private final ObjectProvider<S3Client> s3ClientProvider;
+    private final com.example.Billing.workflow.UpiPaymentLinkService upiPaymentLinkService;
+    private final com.example.Billing.workflow.UpiQrCodeService upiQrCodeService;
 
     @Value("${storage.bucket:uploads}")
     private String storageBucket;
@@ -251,13 +253,20 @@ public class InvoicePdfService {
             leftTotalCell.setBorder(Rectangle.NO_BORDER);
             
             String paymentMethodStr = "";
-            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findByInvoiceId(invoiceId);
+            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findFirstByInvoiceIdOrderByPaidAtDesc(invoiceId);
             if (paymentOpt.isPresent() && paymentOpt.get().getPaymentMethod() != null) {
                 paymentMethodStr = paymentOpt.get().getPaymentMethod().name();
             }
             if (!paymentMethodStr.isEmpty()) {
                 String formattedMethod = paymentMethodStr.substring(0, 1).toUpperCase() + paymentMethodStr.substring(1).toLowerCase();
                 leftTotalCell.addElement(new Paragraph("Payment Method: " + formattedMethod, smallFont));
+            }
+            if (shop.getUpiId() != null && !shop.getUpiId().isBlank() && invoice.getTotalAmount().signum() > 0) {
+                String link = upiPaymentLinkService.create(shop.getUpiId(), displayName, invoice.getTotalAmount(), invoice.getInvoiceNumber());
+                Image upiQr = Image.getInstance(upiQrCodeService.png(link));
+                upiQr.scaleToFit(95, 95);
+                leftTotalCell.addElement(new Paragraph("Scan to pay by UPI", boldFont));
+                leftTotalCell.addElement(upiQr);
             }
             totalsTable.addCell(leftTotalCell);
 

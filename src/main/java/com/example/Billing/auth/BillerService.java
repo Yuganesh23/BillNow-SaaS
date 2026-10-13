@@ -69,7 +69,7 @@ public class BillerService {
                 .name(request.getName().trim())
                 .email(request.getEmail().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("BILLER")
+                .role(assignableRole(request.getRole()))
                 .active(true)
                 .shop(shop)
                 .build();
@@ -105,7 +105,7 @@ public class BillerService {
         }
 
         // 3. Find biller
-        User_entity biller = userRepository.findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
+        User_entity biller = userRepository.findByIdAndShopId(billerId, shop.getId())
                 .orElseThrow(() -> billerNotFound());
 
         // 4. Check email uniqueness if changed
@@ -117,6 +117,7 @@ public class BillerService {
         // 5. Update
         biller.setName(request.getName().trim());
         biller.setEmail(newEmail);
+        if (request.getRole() != null) biller.setRole(assignableRole(request.getRole()));
         
         // Only update password if provided and not empty
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
@@ -164,7 +165,7 @@ public class BillerService {
         responses.add(mapToResponse(shop.getOwner(), shop));
         
         // Add all regular billers
-        userRepository.findByShopIdAndRole(shop.getId(), "BILLER").stream()
+        userRepository.findByShopIdAndRoleIn(shop.getId(), java.util.List.of("MANAGER", "BILLER", "VIEWER")).stream()
                 .map(biller -> mapToResponse(biller, shop))
                 .forEach(responses::add);
                 
@@ -200,7 +201,7 @@ public class BillerService {
 
         // 3. Find biller
         User_entity biller = userRepository
-                .findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
+                .findByIdAndShopId(billerId, shop.getId())
                 .orElseThrow(() -> billerNotFound());
 
         // 4. Deactivate
@@ -242,7 +243,7 @@ public class BillerService {
 
         // 3. Find biller
         User_entity biller = userRepository
-                .findByIdAndShopIdAndRole(billerId, shop.getId(), "BILLER")
+                .findByIdAndShopId(billerId, shop.getId())
                 .orElseThrow(() -> billerNotFound());
 
         // 4. Activate
@@ -289,5 +290,11 @@ public class BillerService {
 
     private AppException billerNotFound() {
         return new AppException(HttpStatus.NOT_FOUND, "BILLER_NOT_FOUND", "Biller not found");
+    }
+
+    private String assignableRole(Role role) {
+        Role value = role == null ? Role.BILLER : role;
+        if (value == Role.SHOP_OWNER) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "Owner role cannot be assigned");
+        return value.name();
     }
 }

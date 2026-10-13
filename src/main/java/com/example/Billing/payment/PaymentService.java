@@ -66,42 +66,21 @@ public class PaymentService {
         if (invoice.getStatus()
                 == InvoiceStatus.CANCELLED) {
 
-            throw new RuntimeException(
-                    "Cannot make payment for a cancelled invoice"
-            );
+            throw new AppException(HttpStatus.CONFLICT, "INVOICE_CANCELLED", "Cannot make payment for a cancelled invoice");
         }
 
 
         if (invoice.getStatus()
                 == InvoiceStatus.REFUNDED) {
 
-            throw new RuntimeException(
-                    "Cannot make payment for a refunded invoice"
-            );
+            throw new AppException(HttpStatus.CONFLICT, "INVOICE_REFUNDED", "Cannot make payment for a refunded invoice");
         }
 
 
         if (invoice.getStatus()
                 == InvoiceStatus.PAID) {
 
-            throw new RuntimeException(
-                    "Invoice is already paid"
-            );
-        }
-
-
-        // -------------------------------------------------
-        // CHECK EXISTING PAYMENT
-        // -------------------------------------------------
-
-        if (paymentRepository
-                .existsByInvoiceId(
-                        invoice.getId()
-                )) {
-
-            throw new RuntimeException(
-                    "Payment already exists for this invoice"
-            );
+            throw new AppException(HttpStatus.CONFLICT, "INVOICE_ALREADY_PAID", "Invoice is already paid");
         }
 
 
@@ -117,34 +96,15 @@ public class PaymentService {
                         BigDecimal.ZERO
                 ) <= 0) {
 
-            throw new RuntimeException(
-                    "Payment amount must be greater than zero"
-            );
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_PAYMENT_AMOUNT", "Payment amount must be greater than zero");
         }
 
 
-        // -------------------------------------------------
-        // GET INVOICE TOTAL
-        // -------------------------------------------------
-
-        BigDecimal invoiceTotal =
-                invoice.getTotalAmount();
-
-
-        // -------------------------------------------------
-        // CHECK PAYMENT AMOUNT
-        // -------------------------------------------------
-
-        if (amount.compareTo(
-                invoiceTotal
-        ) != 0) {
-
-            throw new RuntimeException(
-                    "Payment amount must match invoice total. "
-                            + "Invoice total: "
-                            + invoiceTotal
-            );
-        }
+        BigDecimal alreadyPaid = paymentRepository.sumByInvoiceAndShop(invoice.getId(), shopId);
+        BigDecimal outstanding = invoice.getTotalAmount().subtract(alreadyPaid);
+        if (outstanding.signum() <= 0) throw new AppException(HttpStatus.CONFLICT, "INVOICE_ALREADY_PAID", "Invoice is already paid");
+        BigDecimal applied = amount.min(outstanding);
+        BigDecimal credit = amount.subtract(applied);
 
 
         // -------------------------------------------------
@@ -157,7 +117,7 @@ public class PaymentService {
                         .paymentMethod(
                                 request.getPaymentMethod()
                         )
-                        .amount(amount)
+                        .amount(applied)
                         .build();
 
 
@@ -176,9 +136,13 @@ public class PaymentService {
         // MARK INVOICE AS PAID
         // =================================================
 
-        invoice.setStatus(
-                InvoiceStatus.PAID
-        );
+        BigDecimal paidAfter = alreadyPaid.add(applied);
+        invoice.setStatus(paidAfter.compareTo(invoice.getTotalAmount()) >= 0 ? InvoiceStatus.PAID : InvoiceStatus.PARTIAL);
+
+        if (credit.signum() > 0) {
+            var customer = invoice.getCustomer();
+            customer.setCreditBalance(customer.getCreditBalance().add(credit));
+        }
 
         invoiceRepository.save(
                 invoice
@@ -235,9 +199,7 @@ public class PaymentService {
 
         Payment_entity payment =
                 paymentRepository
-                        .findByInvoiceId(
-                                invoice.getId()
-                        )
+                        .findFirstByInvoiceIdOrderByPaidAtDesc(invoice.getId())
                         .orElseThrow(() -> new AppException(
                                 HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
 

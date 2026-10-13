@@ -17,6 +17,7 @@ import {
   UserCog,
   Truck,
   ShoppingBag
+  ,Workflow
 } from 'lucide-react';
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => {
@@ -35,15 +36,16 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
     { name: 'Purchases', path: '/purchases', icon: ShoppingBag },
     { name: 'Suppliers', path: '/suppliers', icon: Truck },
     { name: 'Customers', path: '/customers', icon: Users },
+    { name: 'Workflows', path: '/workflows', icon: Workflow },
     { name: 'Billers', path: '/billers', icon: UserCog },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
     { name: 'Settings', path: '/settings', icon: Settings },
     { name: 'Subscription', path: '/subscription', icon: Star },
   ];
 
-  const navItems = user?.role === 'SHOP_OWNER' 
-    ? allNavItems 
-    : allNavItems.filter(item => ['Invoices', 'Customers'].includes(item.name));
+  const navItems = ['SHOP_OWNER', 'MANAGER'].includes(user?.role)
+    ? allNavItems
+    : allNavItems.filter(item => ['Invoices', 'Customers', 'Workflows'].includes(item.name));
 
   return (
     <>

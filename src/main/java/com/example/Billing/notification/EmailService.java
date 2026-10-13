@@ -8,6 +8,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +51,20 @@ public class EmailService {
         } catch (Exception exception) {
             log.error("Failed to send invoice email for {}", invoiceNumber, exception);
             throw new IllegalStateException("Unable to send invoice email", exception);
+        }
+    }
+
+    public void sendPaymentReminder(String toEmail, String invoiceNumber, BigDecimal outstanding) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromAddress); message.setTo(toEmail);
+            message.setSubject("Payment reminder for invoice " + invoiceNumber);
+            message.setText("This is a reminder that invoice " + invoiceNumber + " has an outstanding balance of INR " + outstanding.setScale(2) + ".");
+            mailSender.send(message);
+            log.info("Payment reminder sent for invoice {}", invoiceNumber);
+        } catch (Exception exception) {
+            log.error("Failed to send payment reminder for invoice {}", invoiceNumber);
+            throw new IllegalStateException("Unable to send payment reminder", exception);
         }
     }
 }

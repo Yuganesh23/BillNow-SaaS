@@ -3,6 +3,7 @@ package com.example.Billing.customer;
 import com.example.Billing.shop.Shop_entity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(
@@ -55,6 +56,10 @@ public class Customer_entity {
 
     @Column(name = "shipping_address", length = 500)
     private String shippingAddress;
+
+    @Column(name = "credit_balance", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal creditBalance = BigDecimal.ZERO;
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;

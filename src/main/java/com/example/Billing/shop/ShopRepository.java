@@ -16,6 +16,7 @@ public interface ShopRepository extends JpaRepository<Shop_entity, Long> {
     boolean existsByEmail(String email);
 
     List<Shop_entity> findByOwnerId(Long ownerId);
+    List<Shop_entity> findAllByActiveTrue();
 
     Optional<Shop_entity> findByIdAndOwnerId(Long id, Long ownerId);
 

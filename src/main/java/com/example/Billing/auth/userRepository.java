@@ -18,4 +18,6 @@ public interface userRepository
     );
 
     Optional<User_entity> findByIdAndShopIdAndRole(Long id, Long shopId, String role);
+    Optional<User_entity> findByIdAndShopId(Long id, Long shopId);
+    List<User_entity> findByShopIdAndRoleIn(Long shopId, List<String> roles);
 }

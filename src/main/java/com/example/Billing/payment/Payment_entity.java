@@ -22,8 +22,8 @@ public class Payment_entity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "invoice_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "invoice_id", nullable = false)
     private Invoice_entity invoice;
 
     @Enumerated(EnumType.STRING)
