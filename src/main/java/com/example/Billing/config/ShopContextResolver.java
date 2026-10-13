@@ -5,6 +5,8 @@ import com.example.Billing.shop.Shop_entity;
 import com.example.Billing.shop.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.example.Billing.common.AppException;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -15,26 +17,27 @@ public class ShopContextResolver {
     private final ShopRepository shopRepository;
 
     public Shop_entity resolveActiveShop(User_entity user) {
+        if (user == null) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required");
+        }
         if ("BILLER".equals(user.getRole())) {
+            if (user.getShop() == null) {
+                throw new AppException(HttpStatus.FORBIDDEN, "SHOP_ACCESS_DENIED", "User is not assigned to a shop");
+            }
             return user.getShop(); // Billers strictly bound to one shop
         }
 
         // For SHOP_OWNER
         Long branchId = BranchContextHolder.getBranchId();
         if (branchId != null) {
-            Shop_entity shop = shopRepository.findById(branchId)
-                    .orElseThrow(() -> new RuntimeException("Branch not found"));
-            
-            if (!shop.getOwner().getId().equals(user.getId())) {
-                throw new RuntimeException("Unauthorized branch access");
-            }
-            return shop;
+            return shopRepository.findByIdAndOwnerId(branchId, user.getId())
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "BRANCH_NOT_FOUND", "Branch not found"));
         }
 
         // Fallback to first shop (legacy compatibility)
         List<Shop_entity> shops = shopRepository.findByOwnerId(user.getId());
         if (shops.isEmpty()) {
-            return null;
+            throw new AppException(HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found");
         }
         return shops.get(0);
     }

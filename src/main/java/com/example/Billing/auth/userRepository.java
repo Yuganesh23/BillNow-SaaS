@@ -16,4 +16,6 @@ public interface userRepository
             Long shopId,
             String role
     );
+
+    Optional<User_entity> findByIdAndShopIdAndRole(Long id, Long shopId, String role);
 }

@@ -211,7 +211,8 @@ public class WhatsAppService {
         // -------------------------------------------------
 
         whatsappStatusService.markSending(
-                invoiceId
+                invoiceId,
+                shopId
         );
 
 
@@ -278,7 +279,8 @@ public class WhatsAppService {
             // =============================================
 
             whatsappStatusService.markSent(
-                    invoiceId
+                    invoiceId,
+                    shopId
             );
 
         } catch (Exception e) {
@@ -301,6 +303,7 @@ public class WhatsAppService {
 
             whatsappStatusService.markFailed(
                     invoiceId,
+                shopId,
                     message
             );
 

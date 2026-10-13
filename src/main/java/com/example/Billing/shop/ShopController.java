@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.Billing.common.AppException;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -62,11 +64,8 @@ public class ShopController {
             @RequestBody ShopUpdateRequest request
     ) {
         User_entity userDetails = (User_entity) authentication.getPrincipal();
-        Shop_entity shop = shopRepository.findById(id).orElseThrow(() -> new RuntimeException("Shop not found"));
-        
-        if (!shop.getOwner().getId().equals(userDetails.getId())) {
-            throw new RuntimeException("Unauthorized");
-        }
+        Shop_entity shop = shopRepository.findByIdAndOwnerId(id, userDetails.getId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"));
 
         if (request.getName() != null) shop.setName(request.getName());
         if (request.getInvoiceName() != null) shop.setInvoiceName(request.getInvoiceName());
@@ -96,11 +95,8 @@ public class ShopController {
             @PathVariable Long id
     ) {
         User_entity userDetails = (User_entity) authentication.getPrincipal();
-        Shop_entity shop = shopRepository.findById(id).orElseThrow(() -> new RuntimeException("Shop not found"));
-        
-        if (!shop.getOwner().getId().equals(userDetails.getId())) {
-            throw new RuntimeException("Unauthorized");
-        }
+        Shop_entity shop = shopRepository.findByIdAndOwnerId(id, userDetails.getId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"));
 
         try {
             shopRepository.delete(shop);

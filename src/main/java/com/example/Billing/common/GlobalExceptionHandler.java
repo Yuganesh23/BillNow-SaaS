@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     ResponseEntity<ApiError> handleBusinessError(RuntimeException exception, HttpServletRequest request) {
         log.warn("Request rejected for {} {}: {}", request.getMethod(), request.getRequestURI(), exception.getMessage());
-        return response(HttpStatus.BAD_REQUEST, "REQUEST_FAILED", exception.getMessage(), request, Map.of());
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Something went wrong. Please try again.", request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)
