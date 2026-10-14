@@ -31,17 +31,24 @@ public class AdvancedReportController {
     }
 
     @GetMapping("/payments")
-    public java.util.List<ReportDtos.PaymentRow> payments(Authentication auth,
+    public ReportDtos.Page<ReportDtos.PaymentRow> payments(Authentication auth,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to) {
-        return reports.payments(user(auth), from, to);
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="25") int size) {
+        return reports.payments(user(auth), from, to, page, size);
     }
 
     @GetMapping("/day-book")
-    public java.util.List<ReportDtos.DayBookRow> dayBook(Authentication auth,
+    public ReportDtos.Page<ReportDtos.DayBookRow> dayBook(Authentication auth,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to) {
-        return reports.dayBook(user(auth), from, to);
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="25") int size) {
+        return reports.dayBook(user(auth), from, to, page, size);
+    }
+
+    @GetMapping("/registers/{type}/parties")
+    public java.util.List<ReportDtos.PartyOption> partyOptions(Authentication auth, @PathVariable String type) {
+        return reports.partyOptions(user(auth), type);
     }
 
     @GetMapping(value="/payments/export.csv", produces="text/csv")

@@ -21,6 +21,8 @@ public final class ReportDtos {
     public record DayBookRow(LocalDateTime date, String kind, String reference,
                              String partyName, BigDecimal debit, BigDecimal credit) {}
 
+    public record PartyOption(Long id, String name, String gstin) {}
+
     public record GstSection(String category, long documentCount, BigDecimal taxableValue,
                              BigDecimal cgst, BigDecimal sgst, BigDecimal igst, BigDecimal cess) {}
 

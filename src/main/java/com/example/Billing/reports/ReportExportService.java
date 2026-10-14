@@ -48,13 +48,13 @@ public class ReportExportService {
 
     public byte[] paymentsCsv(com.example.Billing.auth.User_entity user, LocalDate from, LocalDate to) {
         StringBuilder csv=new StringBuilder("Invoice,Date,Party,Method,Amount,Reference\r\n");
-        for(ReportDtos.PaymentRow r:reports.payments(user,from,to)) append(csv,r.invoiceNumber(),r.date(),r.partyName(),r.method(),r.amount(),r.reference());
+        for(ReportDtos.PaymentRow r:reports.paymentExport(user,from,to)) append(csv,r.invoiceNumber(),r.date(),r.partyName(),r.method(),r.amount(),r.reference());
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     public byte[] dayBookCsv(com.example.Billing.auth.User_entity user, LocalDate from, LocalDate to) {
         StringBuilder csv=new StringBuilder("Date,Type,Reference,Party,Debit,Credit\r\n");
-        for(ReportDtos.DayBookRow r:reports.dayBook(user,from,to)) append(csv,r.date(),r.kind(),r.reference(),r.partyName(),r.debit(),r.credit());
+        for(ReportDtos.DayBookRow r:reports.dayBookExport(user,from,to)) append(csv,r.date(),r.kind(),r.reference(),r.partyName(),r.debit(),r.credit());
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 

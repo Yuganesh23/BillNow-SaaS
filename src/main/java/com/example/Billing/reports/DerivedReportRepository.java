@@ -67,19 +67,26 @@ public class DerivedReportRepository {
         return new ReportDtos.Page<>(rows, page, size, count, (int) Math.ceil((double) count / size));
     }
 
-    public List<ReportDtos.PaymentRow> payments(Long shopId, LocalDateTime from, LocalDateTime to) {
-        return jdbc.query("""
+    public ReportDtos.Page<ReportDtos.PaymentRow> payments(Long shopId, LocalDateTime from, LocalDateTime to,
+                                                            int page, int size) {
+        MapSqlParameterSource p = params(shopId, from, to).addValue("limit", size).addValue("offset", page * size);
+        String source = """
             SELECT p.id, i.invoice_number, p.paid_at, c.name party_name, p.payment_method, p.amount, p.reference
             FROM payments p JOIN invoices i ON i.id=p.invoice_id JOIN customers c ON c.id=i.customer_id
             WHERE i.shop_id=:shopId AND p.paid_at>=:from AND p.paid_at<:to
-            ORDER BY p.paid_at DESC, p.id DESC
-            """, params(shopId, from, to), (rs, n) -> new ReportDtos.PaymentRow(rs.getLong("id"),
+            """;
+        long count = jdbc.queryForObject("SELECT COUNT(*) FROM (" + source + ") report_rows", p, Long.class);
+        List<ReportDtos.PaymentRow> rows = jdbc.query(source + " ORDER BY p.paid_at DESC, p.id DESC LIMIT :limit OFFSET :offset",
+                p, (rs, n) -> new ReportDtos.PaymentRow(rs.getLong("id"),
                 rs.getString("invoice_number"), timestamp(rs, "paid_at"), rs.getString("party_name"),
                 rs.getString("payment_method"), money(rs, "amount"), rs.getString("reference")));
+        return page(rows, page, size, count);
     }
 
-    public List<ReportDtos.DayBookRow> dayBook(Long shopId, LocalDateTime from, LocalDateTime to) {
-        return jdbc.query("""
+    public ReportDtos.Page<ReportDtos.DayBookRow> dayBook(Long shopId, LocalDateTime from, LocalDateTime to,
+                                                          int page, int size) {
+        MapSqlParameterSource p = params(shopId, from, to).addValue("limit", size).addValue("offset", page * size);
+        String source = """
             SELECT entry_date, kind, reference, party_name, debit, credit FROM (
               SELECT p.paid_at entry_date, 'CUSTOMER_PAYMENT' kind, i.invoice_number reference,
                      c.name party_name, 0 debit, p.amount credit
@@ -92,10 +99,22 @@ public class DerivedReportRepository {
               FROM supplier_ledger sl JOIN suppliers s ON s.id=sl.supplier_id
               LEFT JOIN purchases pu ON pu.id=sl.purchase_id
               WHERE sl.shop_id=:shopId AND sl.transaction_date>=:from AND sl.transaction_date<:to
-            ) entries ORDER BY entry_date DESC
-            """, params(shopId, from, to), (rs, n) -> new ReportDtos.DayBookRow(timestamp(rs, "entry_date"),
+            ) entries
+            """;
+        long count = jdbc.queryForObject("SELECT COUNT(*) FROM (" + source + ") report_rows", p, Long.class);
+        List<ReportDtos.DayBookRow> rows = jdbc.query(source + " ORDER BY entry_date DESC LIMIT :limit OFFSET :offset",
+                p, (rs, n) -> new ReportDtos.DayBookRow(timestamp(rs, "entry_date"),
                 rs.getString("kind"), rs.getString("reference"), rs.getString("party_name"),
                 money(rs, "debit"), money(rs, "credit")));
+        return page(rows, page, size, count);
+    }
+
+    public List<ReportDtos.PartyOption> partyOptions(String type, Long shopId) {
+        String sql = "purchases".equals(type)
+                ? "SELECT id, business_name name, gstin FROM suppliers WHERE shop_id=:shopId ORDER BY business_name, id"
+                : "SELECT id, name, gstin FROM customers WHERE shop_id=:shopId ORDER BY name, id";
+        return jdbc.query(sql, new MapSqlParameterSource("shopId", shopId), (rs, n) ->
+                new ReportDtos.PartyOption(rs.getLong("id"), rs.getString("name"), rs.getString("gstin")));
     }
 
     public List<ReportDtos.GstSection> outward(Long shopId, LocalDateTime from, LocalDateTime to,
@@ -286,4 +305,7 @@ public class DerivedReportRepository {
     private BigDecimal nz(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value; }
     private Integer nullableInt(ResultSet rs, String name) throws SQLException { int value=rs.getInt(name); return rs.wasNull()?null:value; }
+    private <T> ReportDtos.Page<T> page(List<T> rows, int page, int size, long count) {
+        return new ReportDtos.Page<>(rows, page, size, count, (int) Math.ceil((double) count / size));
+    }
 }

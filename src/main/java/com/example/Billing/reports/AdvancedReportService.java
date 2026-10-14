@@ -28,7 +28,7 @@ public class AdvancedReportService {
                                                              Long partyId, BigDecimal taxRate, String documentType,
                                                              int page, int size) {
         Range range = range(from, to);
-        if (page < 0 || size < 1 || size > 200) bad("INVALID_PAGE", "Page must be positive and size must be between 1 and 200");
+        if (page < 0 || size < 1 || size > 200) bad("INVALID_PAGE", "Page must be non-negative and size must be between 1 and 200");
         if (!java.util.Set.of("sales", "purchases", "notes").contains(type)) bad("INVALID_REGISTER", "Unsupported register type");
         return reports.register(type, shopContext.resolveActiveShopId(user), range.from(), range.to(), partyId,
                 taxRate, documentType, page, size);
@@ -46,14 +46,40 @@ public class AdvancedReportService {
         return all;
     }
 
-    public java.util.List<ReportDtos.PaymentRow> payments(User_entity user, LocalDate from, LocalDate to) {
+    public ReportDtos.Page<ReportDtos.PaymentRow> payments(User_entity user, LocalDate from, LocalDate to,
+                                                            int page, int size) {
         Range range = range(from, to);
-        return reports.payments(shopContext.resolveActiveShopId(user), range.from(), range.to());
+        validatePage(page, size);
+        return reports.payments(shopContext.resolveActiveShopId(user), range.from(), range.to(), page, size);
     }
 
-    public java.util.List<ReportDtos.DayBookRow> dayBook(User_entity user, LocalDate from, LocalDate to) {
+    public ReportDtos.Page<ReportDtos.DayBookRow> dayBook(User_entity user, LocalDate from, LocalDate to,
+                                                          int page, int size) {
         Range range = range(from, to);
-        return reports.dayBook(shopContext.resolveActiveShopId(user), range.from(), range.to());
+        validatePage(page, size);
+        return reports.dayBook(shopContext.resolveActiveShopId(user), range.from(), range.to(), page, size);
+    }
+
+    public java.util.List<ReportDtos.PaymentRow> paymentExport(User_entity user, LocalDate from, LocalDate to) {
+        java.util.ArrayList<ReportDtos.PaymentRow> all = new java.util.ArrayList<>();
+        int page = 0; ReportDtos.Page<ReportDtos.PaymentRow> result;
+        do { result = payments(user, from, to, page++, 200); all.addAll(result.content()); }
+        while (page < result.totalPages());
+        return all;
+    }
+
+    public java.util.List<ReportDtos.DayBookRow> dayBookExport(User_entity user, LocalDate from, LocalDate to) {
+        java.util.ArrayList<ReportDtos.DayBookRow> all = new java.util.ArrayList<>();
+        int page = 0; ReportDtos.Page<ReportDtos.DayBookRow> result;
+        do { result = dayBook(user, from, to, page++, 200); all.addAll(result.content()); }
+        while (page < result.totalPages());
+        return all;
+    }
+
+    public java.util.List<ReportDtos.PartyOption> partyOptions(User_entity user, String type) {
+        if (!java.util.Set.of("sales", "purchases", "notes").contains(type))
+            bad("INVALID_REGISTER", "Unsupported register type");
+        return reports.partyOptions(type, shopContext.resolveActiveShopId(user));
     }
 
     public ReportDtos.Gstr1Summary gstr1(User_entity user, LocalDate from, LocalDate to, BigDecimal threshold) {
@@ -121,5 +147,9 @@ public class AdvancedReportService {
         return new Range(from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
     private void bad(String code, String message) { throw new AppException(HttpStatus.BAD_REQUEST, code, message); }
+    private void validatePage(int page, int size) {
+        if (page < 0 || size < 1 || size > 200)
+            bad("INVALID_PAGE", "Page must be non-negative and size must be between 1 and 200");
+    }
     private record Range(LocalDateTime from, LocalDateTime to) {}
 }
