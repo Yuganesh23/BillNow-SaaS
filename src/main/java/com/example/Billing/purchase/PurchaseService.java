@@ -121,6 +121,11 @@ public class PurchaseService {
         
         purchase.setSubtotal(calculation.taxableAmount());
         purchase.setTaxAmount(calculation.cgst().add(calculation.sgst()).add(calculation.igst()).add(calculation.cess()));
+        purchase.setTaxableAmount(calculation.taxableAmount());
+        purchase.setCgstTotal(calculation.cgst());
+        purchase.setSgstTotal(calculation.sgst());
+        purchase.setIgstTotal(calculation.igst());
+        purchase.setCessTotal(calculation.cess());
         BigDecimal grandTotal = calculation.total();
         purchase.setGrandTotal(grandTotal);
         

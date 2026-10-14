@@ -2,6 +2,13 @@
 
 This document records calculation decisions; it is not tax advice. A practising CA must approve these rules before production filing.
 
+## Reporting additions
+
+- GSTR-style reports are reconciliation aids and are not described as filing-ready.
+- B2C-large classification uses the configurable `REPORTS_GST_B2CL_THRESHOLD`; its current legal value and applicability require CA review.
+- Existing document notes store a gross amount rather than itemised tax lines, so report reductions are apportioned using the original invoice's taxable and tax ratios.
+- Historical purchases stored only aggregate tax. V4 splits it as CGST/SGST for same-state suppliers or IGST for other-state suppliers; historical cess cannot be reconstructed and remains zero.
+
 - GSTIN validation checks the official 15-character structure, state/UT prefix, embedded PAN shape and base-36 check digit. State code `97` is retained as “Other Territory”.
 - Place of supply currently uses the buyer state code (derived from a valid GSTIN, otherwise selected manually). A missing unregistered-customer state falls back to the seller state.
 - Equal seller and place-of-supply codes produce CGST and SGST in equal halves. Different codes produce IGST.

@@ -192,8 +192,8 @@ public class ReportController {
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
 
-            throw new RuntimeException(
-                    "User is not authenticated"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required"
             );
         }
 
@@ -204,8 +204,8 @@ public class ReportController {
 
         if (!(principal instanceof User_entity)) {
 
-            throw new RuntimeException(
-                    "Invalid authenticated user"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required"
             );
         }
 

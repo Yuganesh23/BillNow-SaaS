@@ -33,6 +33,12 @@ public class Payment_entity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    @Column(length = 100)
+    private String reference;
+
+    @Column(length = 500)
+    private String notes;
+
     @Column(nullable = false)
     private LocalDateTime paidAt;
 

@@ -71,7 +71,7 @@ class TenantControllerIsolationTest {
                 "AuthController", "BillerController", "CustomerController", "DashboardController",
                 "InventoryController", "InvoiceController", "ObjectStorageController", "PaymentController",
                 "ProductController", "ProfileController", "PurchaseController", "RazorpayWebhookController",
-                "ReportController", "SaaSSubscriptionController", "ShopController",
+                "ReportController", "AdvancedReportController", "SaaSSubscriptionController", "ShopController",
                 "ShopWhatsAppConfigController", "SupplierController", "QuotationController",
                 "RecurringInvoiceController", "CustomerAgingController", "AuditController"
         );
