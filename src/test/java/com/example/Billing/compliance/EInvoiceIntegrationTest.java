@@ -8,6 +8,7 @@ import com.example.Billing.invoice.*;
 import com.example.Billing.invoice.whatsapp.WhatsAppStatus;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.shop.ShopRepository;
+import com.example.Billing.shop.SubscriptionTier;
 import com.example.Billing.supplier.SupplierRepository;
 import com.example.Billing.support.TenantTestFixture;
 import org.junit.jupiter.api.*;
@@ -85,6 +86,7 @@ class EInvoiceIntegrationTest {
 
     @Test void validationExplainsMissingComplianceFields() {
         var tenant=fixture.createTenant("Validation"); Invoice_entity invoice=invoice(tenant);
+        tenant.shop().setSubscriptionTier(SubscriptionTier.PRO); shops.save(tenant.shop());
         inTenant(tenant,()->service.saveSettings(tenant.owner(),new EInvoiceService.Settings(true,false,24)));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> inTenant(tenant,()->service.generate(tenant.owner(),invoice.getId())))
                 .isInstanceOf(com.example.Billing.common.AppException.class)
@@ -92,7 +94,7 @@ class EInvoiceIntegrationTest {
     }
 
     private void prepare(TenantTestFixture.Tenant t){
-        t.shop().setGstin("27AAPFU0939F1ZV");t.shop().setLegalName("IRN Seller Pvt Ltd");t.shop().setLocality("Mumbai");t.shop().setPincode("400001");shops.save(t.shop());
+        t.shop().setSubscriptionTier(SubscriptionTier.PRO);t.shop().setGstin("27AAPFU0939F1ZV");t.shop().setLegalName("IRN Seller Pvt Ltd");t.shop().setLocality("Mumbai");t.shop().setPincode("400001");shops.save(t.shop());
         t.customer().setGstin("27AAPFU0939F1ZV");t.customer().setAddress("Buyer address");t.customer().setLocality("Mumbai");t.customer().setPincode("400002");t.customer().setStateCode("27");customers.save(t.customer());
         t.product().setHsnCode("1001");products.save(t.product());
     }

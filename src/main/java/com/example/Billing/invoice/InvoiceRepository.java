@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> {
 
     long countByShopId(Long shopId);
+    long countByShopIdAndCreatedAtGreaterThanEqual(Long shopId, java.time.LocalDateTime createdAt);
 
     List<Invoice_entity> findByShopIdOrderByCreatedAtDesc(Long shopId);
 

@@ -41,6 +41,7 @@ public class InvoiceService {
     private final ProductRepository productRepository;
     private final TaxCalculationService taxCalculationService;
     private final DocumentNumberService documentNumberService;
+    private final com.example.Billing.subscription.PlanLimitsService planLimitsService;
 
 
     // =====================================================
@@ -67,30 +68,7 @@ public class InvoiceService {
             if (existingInvoice.isPresent()) return mapToResponse(existingInvoice.get());
         }
 
-        // -------------------------------------------------
-        // SUBSCRIPTION CHECK
-        // -------------------------------------------------
-        
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
-        
-        if (tier == null) {
-            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
-            shop.setSubscriptionTier(tier);
-            shop.setTrialEndsAt(now.plusDays(7));
-            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
-            // since we added default values it should be TRIAL.
-        }
-        
-        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
-            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
-                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
-            }
-        } else {
-            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
-                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
-            }
-        }
+        planLimitsService.assertCanCreateInvoice(shop);
 
 
 

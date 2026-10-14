@@ -22,6 +22,15 @@ public class SaaSSubscriptionController {
     private final SaaSSubscriptionService subscriptionService;
 
     private final SecurityUtils securityUtils;
+    private final com.example.Billing.config.ShopContextResolver shopContextResolver;
+    private final PlanLimitsService planLimitsService;
+
+    @GetMapping("/usage")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ResponseEntity<PlanLimitsService.Usage> usage() {
+        User_entity user = securityUtils.getCurrentUser();
+        return ResponseEntity.ok(planLimitsService.usage(shopContextResolver.resolveActiveShop(user)));
+    }
 
 
     // =========================================================

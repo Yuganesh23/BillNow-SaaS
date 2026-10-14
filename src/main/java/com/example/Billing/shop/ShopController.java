@@ -23,6 +23,7 @@ public class ShopController {
 
     private final ShopRepository shopRepository;
     private final userRepository userRepository;
+    private final com.example.Billing.subscription.PlanLimitsService planLimitsService;
 
     @PreAuthorize("hasRole('SHOP_OWNER')")
     @GetMapping
@@ -40,6 +41,11 @@ public class ShopController {
     ) {
         User_entity userDetails = (User_entity) authentication.getPrincipal();
         User_entity owner = userRepository.findById(userDetails.getId()).orElseThrow();
+        planLimitsService.assertCanCreateBranch(com.example.Billing.config.BranchContextHolder.getBranchId() == null
+                ? shopRepository.findByOwnerId(owner.getId()).stream().findFirst()
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"))
+                : shopRepository.findByIdAndOwnerId(com.example.Billing.config.BranchContextHolder.getBranchId(), owner.getId())
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found")));
 
         String stateCode = resolveStateCode(request.getGstin(), request.getStateCode());
         Shop_entity newShop = Shop_entity.builder()

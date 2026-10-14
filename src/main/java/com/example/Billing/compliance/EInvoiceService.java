@@ -30,6 +30,7 @@ public class EInvoiceService {
     private final ShopContextResolver shopContext;
     private final EInvoiceProvider provider;
     private final ObjectMapper objectMapper;
+    private final com.example.Billing.subscription.PlanLimitsService planLimitsService;
 
     @Value("${compliance.mock-enabled:true}") private boolean mockEnabled;
 
@@ -58,6 +59,7 @@ public class EInvoiceService {
             throw new AppException(HttpStatus.CONFLICT, "E_INVOICE_DISABLED", "E-invoicing is disabled for this shop");
         Invoice_entity invoice = invoices.findByIdAndShopIdForUpdate(invoiceId, shopId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
+        planLimitsService.assertEInvoiceAllowed(shop);
         Optional<EInvoiceRecord> existing = records.findByInvoiceIdAndShopId(invoiceId, shopId);
         if (existing.isPresent() && existing.get().getStatus() == ComplianceStatus.GENERATED) return map(existing.get());
         Map<String, Object> payload = payload(invoice, shop);

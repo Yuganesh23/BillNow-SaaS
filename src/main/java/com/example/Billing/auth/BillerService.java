@@ -21,6 +21,7 @@ public class BillerService {
     private final ShopContextResolver shopContextResolver;
     private final PasswordEncoder passwordEncoder;
     private final InvoiceRepository invoiceRepository;
+    private final com.example.Billing.subscription.PlanLimitsService planLimitsService;
 
 
     // =========================================================
@@ -48,6 +49,7 @@ public class BillerService {
                     "Owner is not associated with a shop"
             );
         }
+        planLimitsService.assertCanCreateUser(shop);
 
         // 3. Check email
         if (userRepository.existsByEmail(request.getEmail())) {

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useBranch } from '../context/BranchContext';
 import axiosClient from '../api/axiosClient';
 
 const tiers = [
-  { name: 'BASE', price: '4,999', saving: 'Save ₹989/year', description: 'Single shop', features: ['Unlimited invoices', 'Standard PDF generation', '1 admin user'] },
-  { name: 'PRO', price: '9,999', saving: 'Save ₹1,989/year', description: 'Growing retail team', features: ['Everything in Base', 'WhatsApp integration', 'Up to 3 staff accounts', 'Low-stock alerts'], featured: true },
-  { name: 'ENTERPRISE', price: '24,999', saving: 'Save ₹4,989/year', description: 'Wholesalers and multi-branch', features: ['Everything in Pro', 'Multi-branch support', 'Unlimited staff', 'GST Excel exports'] },
+  { name: 'BASE', price: '4,999', saving: 'Save ₹989/year', description: 'Single shop', features: ['250 invoices/month', '2 active users', '1 branch', 'Standard PDF generation'] },
+  { name: 'PRO', price: '9,999', saving: 'Save ₹1,989/year', description: 'Growing retail team', features: ['2,000 invoices/month', '10 active users', '5 branches', 'E-invoice access'], featured: true },
+  { name: 'ENTERPRISE', price: '24,999', saving: 'Save ₹4,989/year', description: 'Wholesalers and multi-branch', features: ['100,000 invoices/month', '100 active users', '100 branches', 'E-invoice access'] },
 ];
 
 const loadRazorpay = () => new Promise((resolve) => {
@@ -21,9 +21,15 @@ const loadRazorpay = () => new Promise((resolve) => {
 export default function Subscription() {
   const { branches, activeBranchId, fetchBranches } = useBranch();
   const [upgradingTier, setUpgradingTier] = useState(null);
+  const [usage, setUsage] = useState(null);
   const currentBranch = branches.find((branch) => String(branch.id) === String(activeBranchId));
   const currentPlan = currentBranch?.subscriptionTier || 'TRIAL';
   const expiry = currentBranch?.subscriptionEndsAt || currentBranch?.trialEndsAt;
+
+  useEffect(() => {
+    if (!activeBranchId) return;
+    axiosClient.get('/subscription/usage').then(({ data }) => setUsage(data)).catch(() => setUsage(null));
+  }, [activeBranchId]);
 
   const handleUpgrade = async (tier) => {
     if (!currentBranch) return alert('Please select a branch first.');
@@ -71,6 +77,7 @@ export default function Subscription() {
       <div className="mb-8"><h1 className="text-2xl font-bold text-slate-900">Manage Subscription</h1><p className="mt-2 text-sm text-slate-700">Secure annual billing powered by Razorpay.</p></div>
       <div className="mb-8 flex flex-col gap-4 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
         <div><h2 className="text-lg font-semibold text-slate-900">Shop: <span className="font-normal">{currentBranch?.name || 'Select a branch'}</span></h2><p className="mt-2 text-sm text-slate-500">Current plan: <strong className="text-indigo-700">{currentPlan}</strong>{expiry ? ` · valid until ${new Date(expiry).toLocaleDateString()}` : ''}</p></div>
+        {usage && <div className="grid grid-cols-3 gap-4 text-center text-sm"><div><strong className="block text-slate-900">{usage.invoicesThisMonth}/{usage.limits.invoicesPerMonth}</strong><span className="text-slate-500">Invoices</span></div><div><strong className="block text-slate-900">{usage.activeUsers}/{usage.limits.users}</strong><span className="text-slate-500">Users</span></div><div><strong className="block text-slate-900">{usage.branches}/{usage.limits.branches}</strong><span className="text-slate-500">Branches</span></div></div>}
       </div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {tiers.map((tier) => {
