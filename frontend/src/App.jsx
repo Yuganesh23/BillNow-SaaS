@@ -28,6 +28,7 @@ const Purchases = lazy(() => import('./pages/Purchases'));
 const PurchaseForm = lazy(() => import('./pages/PurchaseForm'));
 const PurchaseDetails = lazy(() => import('./pages/PurchaseDetails'));
 const Workflows = lazy(() => import('./pages/Workflows'));
+const Imports = lazy(() => import('./pages/Imports'));
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -76,6 +77,7 @@ function App() {
               
               <Route path="/payments" element={<Payments />} />
               <Route path="/workflows" element={<Workflows />} />
+              <Route path="/imports" element={<Imports />} />
               
               <Route path="/reports" element={<Reports />} />
               

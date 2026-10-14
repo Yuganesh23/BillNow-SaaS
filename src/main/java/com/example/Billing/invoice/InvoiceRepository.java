@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 
 public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> {
 
+    long countByShopId(Long shopId);
+
     List<Invoice_entity> findByShopIdOrderByCreatedAtDesc(Long shopId);
 
     Optional<Invoice_entity> findByIdAndShopId(

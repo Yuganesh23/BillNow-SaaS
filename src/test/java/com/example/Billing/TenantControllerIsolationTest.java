@@ -74,7 +74,7 @@ class TenantControllerIsolationTest {
                 "ReportController", "AdvancedReportController", "SaaSSubscriptionController", "ShopController",
                 "ShopWhatsAppConfigController", "SupplierController", "QuotationController",
                 "RecurringInvoiceController", "CustomerAgingController", "AuditController", "EInvoiceController",
-                "EWayBillController"
+                "EWayBillController", "ImportController", "OnboardingController"
         );
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false);

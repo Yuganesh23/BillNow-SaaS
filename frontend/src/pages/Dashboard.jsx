@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getDashboardData } from '../api/dashboardApi';
+import { getDashboardData, getOnboardingStatus } from '../api/dashboardApi';
 import { LoadingState } from '../components/common/States';
 import { 
   IndianRupee, 
@@ -23,14 +23,16 @@ export default function Dashboard() {
 
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [onboarding, setOnboarding] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await getDashboardData();
+        const [response, checklist] = await Promise.all([getDashboardData(), getOnboardingStatus()]);
         setData(response);
+        setOnboarding(checklist);
       } catch  {
         setError('Failed to load dashboard data');
       } finally {
@@ -54,6 +56,26 @@ export default function Dashboard() {
           <Icon className="w-6 h-6" />
         </div>
       </div>
+
+      {onboarding && !onboarding.complete && (
+        <section className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-900">Finish setting up BillNow</h2>
+              <p className="mt-1 text-sm text-slate-600">{onboarding.completedSteps} of {onboarding.totalSteps} steps complete</p>
+            </div>
+            <span className="text-sm font-semibold text-indigo-700">{onboarding.percentComplete}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-indigo-100"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${onboarding.percentComplete}%` }} /></div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {onboarding.steps.map((step) => (
+              <Link key={step.key} to={step.route} className={`rounded-lg border px-3 py-2 text-sm ${step.complete ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'}`}>
+                {step.complete ? '✓ ' : '○ '}{step.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 

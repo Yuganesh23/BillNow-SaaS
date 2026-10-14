@@ -17,7 +17,7 @@ import {
   UserCog,
   Truck,
   ShoppingBag
-  ,Workflow
+  ,Workflow, Upload
 } from 'lucide-react';
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => {
@@ -39,6 +39,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
     { name: 'Workflows', path: '/workflows', icon: Workflow },
     { name: 'Billers', path: '/billers', icon: UserCog },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
+    { name: 'Imports', path: '/imports', icon: Upload },
     { name: 'Settings', path: '/settings', icon: Settings },
     { name: 'Subscription', path: '/subscription', icon: Star },
   ];
