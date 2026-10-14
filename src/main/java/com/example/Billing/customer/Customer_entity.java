@@ -42,6 +42,12 @@ public class Customer_entity {
     @Column(length = 500)
     private String address;
 
+    @Column(length = 100)
+    private String locality;
+
+    @Column(length = 6)
+    private String pincode;
+
     @Column(length = 15)
     private String gstin;
 

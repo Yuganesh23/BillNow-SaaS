@@ -17,6 +17,11 @@ public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> 
             Long shopId
     );
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from Invoice_entity i where i.id = :invoiceId and i.shop.id = :shopId")
+    Optional<Invoice_entity> findByIdAndShopIdForUpdate(@Param("invoiceId") Long invoiceId,
+                                                        @Param("shopId") Long shopId);
+
     Optional<Invoice_entity> findByShopIdAndIdempotencyKey(Long shopId, String idempotencyKey);
 
     @Query("SELECT COUNT(i) FROM Invoice_entity i WHERE i.biller.id = :billerId")

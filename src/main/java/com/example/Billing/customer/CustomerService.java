@@ -56,6 +56,8 @@ public class CustomerService {
                         )
                         .email(request.getEmail())
                         .address(request.getAddress())
+                        .locality(request.getLocality())
+                        .pincode(request.getPincode())
                         .gstin(normalizeGstin(request.getGstin()))
                         .stateCode(stateCode)
                         .billingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress())
@@ -168,6 +170,8 @@ public class CustomerService {
         customer.setAddress(
                 request.getAddress()
         );
+        customer.setLocality(request.getLocality());
+        customer.setPincode(request.getPincode());
         customer.setGstin(normalizeGstin(request.getGstin()));
         customer.setStateCode(resolveStateCode(request.getGstin(), request.getStateCode(), shop.getStateCode()));
         customer.setBillingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress());
@@ -275,6 +279,8 @@ public class CustomerService {
                 .address(
                         customer.getAddress()
                 )
+                .locality(customer.getLocality())
+                .pincode(customer.getPincode())
                 .gstin(customer.getGstin())
                 .stateCode(customer.getStateCode())
                 .billingAddress(customer.getBillingAddress())

@@ -87,6 +87,24 @@ public class Shop_entity {
     @Column(length = 500)
     private String address;
 
+    @Column(length = 100)
+    private String locality;
+
+    @Column(length = 6)
+    private String pincode;
+
+    @Builder.Default
+    @Column(name = "e_invoice_enabled", nullable = false)
+    private boolean eInvoiceEnabled = false;
+
+    @Builder.Default
+    @Column(name = "e_way_bill_enabled", nullable = false)
+    private boolean eWayBillEnabled = false;
+
+    @Builder.Default
+    @Column(name = "e_invoice_cancellation_window_hours", nullable = false)
+    private Integer eInvoiceCancellationWindowHours = 24;
+
     @Column(columnDefinition = "TEXT")
     private String logoBase64;
 

@@ -19,6 +19,10 @@ public class CustomerRequest_Dto {
     private String email;
 
     private String address;
+    @Size(max = 100)
+    private String locality;
+    @Pattern(regexp = "[1-9][0-9]{5}", message = "PIN code must contain six digits and cannot start with zero")
+    private String pincode;
     @Size(max = 15)
     private String gstin;
     @Pattern(regexp = "[0-9]{2}", message = "State code must contain two digits")

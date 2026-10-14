@@ -73,7 +73,8 @@ class TenantControllerIsolationTest {
                 "ProductController", "ProfileController", "PurchaseController", "RazorpayWebhookController",
                 "ReportController", "AdvancedReportController", "SaaSSubscriptionController", "ShopController",
                 "ShopWhatsAppConfigController", "SupplierController", "QuotationController",
-                "RecurringInvoiceController", "CustomerAgingController", "AuditController"
+                "RecurringInvoiceController", "CustomerAgingController", "AuditController", "EInvoiceController",
+                "EWayBillController"
         );
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false);

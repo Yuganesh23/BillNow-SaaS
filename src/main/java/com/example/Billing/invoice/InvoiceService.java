@@ -419,6 +419,11 @@ public class InvoiceService {
                         )
                         .orElseThrow(this::invoiceNotFound);
 
+        if (invoice.isComplianceLocked()) {
+            throw new AppException(HttpStatus.CONFLICT, "INVOICE_COMPLIANCE_LOCKED",
+                    "This invoice has an IRN and cannot be changed through the normal invoice cancellation flow");
+        }
+
 
         // -------------------------------------------------
         // CHECK STATUS

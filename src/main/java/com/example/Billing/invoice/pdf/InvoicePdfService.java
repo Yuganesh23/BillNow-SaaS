@@ -31,6 +31,11 @@ import java.io.ByteArrayOutputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import com.example.Billing.gst.IndianAmountInWords;
+import com.example.Billing.compliance.ComplianceStatus;
+import com.example.Billing.compliance.EInvoiceRecord;
+import com.example.Billing.compliance.EInvoiceRecordRepository;
+import com.example.Billing.compliance.EWayBillRecord;
+import com.example.Billing.compliance.EWayBillRecordRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +47,8 @@ public class InvoicePdfService {
     private final ObjectProvider<S3Client> s3ClientProvider;
     private final com.example.Billing.workflow.UpiPaymentLinkService upiPaymentLinkService;
     private final com.example.Billing.workflow.UpiQrCodeService upiQrCodeService;
+    private final EInvoiceRecordRepository eInvoiceRecordRepository;
+    private final EWayBillRecordRepository eWayBillRecordRepository;
 
     @Value("${storage.bucket:uploads}")
     private String storageBucket;
@@ -152,6 +159,8 @@ public class InvoicePdfService {
 
             headerTable.addCell(rightHeader);
             document.add(headerTable);
+
+            addComplianceDetails(document, invoice, shop, smallFont, boldFont);
             
             document.add(new Paragraph(" "));
             addLineSeparator(document);
@@ -338,6 +347,45 @@ public class InvoicePdfService {
         } catch (Exception e) {
             throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate invoice PDF");
         }
+    }
+
+    private void addComplianceDetails(Document document, Invoice_entity invoice, Shop_entity shop,
+                                      Font smallFont, Font boldFont) throws Exception {
+        EInvoiceRecord eInvoice = eInvoiceRecordRepository.findByInvoiceIdAndShopId(invoice.getId(), shop.getId())
+                .filter(record -> record.getStatus() == ComplianceStatus.GENERATED).orElse(null);
+        EWayBillRecord eWayBill = eWayBillRecordRepository.findByInvoiceIdAndShopId(invoice.getId(), shop.getId())
+                .filter(record -> record.getStatus() == ComplianceStatus.GENERATED).orElse(null);
+        if (eInvoice == null && eWayBill == null) return;
+
+        PdfPTable table = new PdfPTable(eInvoice != null && eInvoice.getSignedQrData() != null ? 2 : 1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(8);
+        PdfPCell details = new PdfPCell();
+        details.setPadding(7);
+        details.setBorderColor(new Color(203, 213, 225));
+        details.addElement(new Paragraph("GST COMPLIANCE", boldFont));
+        if (eInvoice != null) {
+            details.addElement(new Paragraph("IRN: " + safe(eInvoice.getIrn()), smallFont));
+            details.addElement(new Paragraph("Ack No: " + safe(eInvoice.getAcknowledgementNumber()), smallFont));
+            details.addElement(new Paragraph("Ack Date: " + (eInvoice.getAcknowledgementDate() == null ? "" :
+                    eInvoice.getAcknowledgementDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))), smallFont));
+        }
+        if (eWayBill != null) {
+            details.addElement(new Paragraph("E-way Bill: " + safe(eWayBill.getEWayBillNumber()), smallFont));
+            details.addElement(new Paragraph("Valid until: " + (eWayBill.getValidUntil() == null ? "" :
+                    eWayBill.getValidUntil().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))), smallFont));
+        }
+        table.addCell(details);
+        if (eInvoice != null && eInvoice.getSignedQrData() != null) {
+            Image qr = Image.getInstance(upiQrCodeService.png(eInvoice.getSignedQrData()));
+            qr.scaleToFit(90, 90);
+            PdfPCell qrCell = new PdfPCell(qr, true);
+            qrCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            qrCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            qrCell.setBorderColor(new Color(203, 213, 225));
+            table.addCell(qrCell);
+        }
+        document.add(table);
     }
 
     private byte[] loadLogo(Shop_entity shop) {

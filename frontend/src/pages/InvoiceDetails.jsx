@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowLeft, Printer, Download, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Download, MessageCircle, ShieldCheck, Truck } from 'lucide-react';
 import { getInvoiceById } from '../api/invoiceApi';
 import axiosClient from '../api/axiosClient';
 import { LoadingState } from '../components/common/States';
@@ -21,12 +21,21 @@ export default function InvoiceDetails() {
   const [logoUrl, setLogoUrl] = useState('');
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [eInvoice, setEInvoice] = useState(null);
+  const [eWayBill, setEWayBill] = useState(null);
+  const [complianceBusy, setComplianceBusy] = useState(false);
+  const [showTransport, setShowTransport] = useState(false);
+  const [transport, setTransport] = useState({ transporterId: '', transporterName: '', transportDocumentNumber: '', transportDocumentDate: '', transportMode: 'ROAD', vehicleNumber: '', vehicleType: 'REGULAR', distanceKm: '' });
 
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
         const data = await getInvoiceById(id);
         setInvoice(data);
+        if (user?.role === 'SHOP_OWNER' || user?.role === 'MANAGER') {
+          axiosClient.get(`/compliance/invoices/${id}`).then(({ data: record }) => setEInvoice(record)).catch(() => {});
+          axiosClient.get(`/compliance/e-way-bills/invoices/${id}`).then(({ data: record }) => setEWayBill(record)).catch(() => {});
+        }
         if (data.status === 'PAID') {
           axiosClient.get(`/payments/invoice/${id}`)
             .then((response) => setPaymentMethod(response.data.paymentMethod))
@@ -39,7 +48,7 @@ export default function InvoiceDetails() {
       }
     };
     fetchInvoice();
-  }, [id]);
+  }, [id, user?.role]);
 
   const invoiceShop = branches?.find((branch) => branch.id === invoice?.shopId);
   const shopDetails = invoiceShop || user;
@@ -94,6 +103,29 @@ export default function InvoiceDetails() {
     }
   };
 
+  const generateEInvoice = async () => {
+    setComplianceBusy(true); setShareMessage('');
+    try {
+      const { data } = await axiosClient.post(`/compliance/invoices/${id}/generate`);
+      setEInvoice(data);
+      setShareMessage(data.status === 'GENERATED' ? 'E-invoice generated and the invoice is now compliance locked.' : data.lastError);
+    } catch (requestError) {
+      setShareMessage(requestError.response?.data?.message || 'E-invoice generation failed.');
+    } finally { setComplianceBusy(false); }
+  };
+
+  const generateEWayBill = async (event) => {
+    event.preventDefault(); setComplianceBusy(true); setShareMessage('');
+    try {
+      const payload = { ...transport, distanceKm: Number(transport.distanceKm), transportDocumentDate: transport.transportDocumentDate || null };
+      const { data } = await axiosClient.post(`/compliance/e-way-bills/invoices/${id}/generate`, payload);
+      setEWayBill(data); setShowTransport(false);
+      setShareMessage(data.status === 'GENERATED' ? 'E-way bill generated.' : data.lastError);
+    } catch (requestError) {
+      setShareMessage(requestError.response?.data?.message || 'E-way bill generation failed.');
+    } finally { setComplianceBusy(false); }
+  };
+
   if (loading) return <LoadingState message="Loading invoice..." />;
   if (error || !invoice) return <div className="p-8 text-red-500">{error || 'Invoice not found.'}</div>;
 
@@ -119,6 +151,27 @@ export default function InvoiceDetails() {
       </div>
 
       {shareMessage && <div role="status" className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 print:hidden">{shareMessage}</div>}
+
+      {(user?.role === 'SHOP_OWNER' || user?.role === 'MANAGER') && (
+        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 print:hidden">
+          <div className="flex flex-wrap items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-indigo-600" />
+            <div className="mr-auto"><p className="text-sm font-semibold text-slate-900">GST compliance</p><p className="text-xs text-slate-500">Generate only after verifying party and transport details.</p></div>
+            {eInvoice?.status === 'GENERATED' ? <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">IRN {eInvoice.acknowledgementNumber}</span> : <button type="button" disabled={complianceBusy} onClick={generateEInvoice} className="invoice-action disabled:opacity-50"><ShieldCheck className="h-4 w-4" /> Generate e-invoice</button>}
+            {eWayBill?.status === 'GENERATED' ? <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">EWB {eWayBill.eWayBillNumber}</span> : <button type="button" disabled={complianceBusy} onClick={() => setShowTransport((value) => !value)} className="invoice-action disabled:opacity-50"><Truck className="h-4 w-4" /> E-way bill</button>}
+          </div>
+          {showTransport && <form onSubmit={generateEWayBill} className="mt-4 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <input value={transport.transporterId} onChange={(e) => setTransport({ ...transport, transporterId: e.target.value })} placeholder="Transporter GSTIN/ID" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input value={transport.transporterName} onChange={(e) => setTransport({ ...transport, transporterName: e.target.value })} placeholder="Transporter name" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <select value={transport.transportMode} onChange={(e) => setTransport({ ...transport, transportMode: e.target.value })} className="rounded-md border border-slate-300 px-3 py-2 text-sm"><option value="ROAD">Road</option><option value="RAIL">Rail</option><option value="AIR">Air</option><option value="SHIP">Ship</option></select>
+            <input value={transport.vehicleNumber} onChange={(e) => setTransport({ ...transport, vehicleNumber: e.target.value })} placeholder="Vehicle number" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input value={transport.transportDocumentNumber} onChange={(e) => setTransport({ ...transport, transportDocumentNumber: e.target.value })} placeholder="Transport document no." className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input type="date" value={transport.transportDocumentDate} onChange={(e) => setTransport({ ...transport, transportDocumentDate: e.target.value })} className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input required min="0" max="4000" type="number" value={transport.distanceKm} onChange={(e) => setTransport({ ...transport, distanceKm: e.target.value })} placeholder="Distance (km)" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <button disabled={complianceBusy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{complianceBusy ? 'Submitting…' : 'Generate e-way bill'}</button>
+          </form>}
+        </section>
+      )}
 
       <article className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-5 sm:p-7 print:shadow-none print:ring-0">
         <header className="grid grid-cols-1 gap-5 border-b border-slate-200 pb-5 sm:grid-cols-[auto_1fr_auto] sm:items-start">

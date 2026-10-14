@@ -54,6 +54,8 @@ public class ShopController {
                 .legalName(request.getLegalName())
                 .state(request.getState())
                 .address(request.getAddress())
+                .locality(request.getLocality())
+                .pincode(validPincode(request.getPincode()))
                 .owner(owner)
                 .active(true)
                 .trialEndsAt(java.time.LocalDateTime.now().plusDays(7))
@@ -94,6 +96,8 @@ public class ShopController {
         if (request.getInvoiceTerms() != null) shop.setInvoiceTerms(request.getInvoiceTerms());
         if (request.getUpiId() != null) shop.setUpiId(request.getUpiId());
         if (request.getAddress() != null) shop.setAddress(request.getAddress());
+        if (request.getLocality() != null) shop.setLocality(request.getLocality());
+        if (request.getPincode() != null) shop.setPincode(validPincode(request.getPincode()));
         if (request.getLogoBase64() != null && !request.getLogoBase64().isBlank()) {
             shop.setLogoBase64(request.getLogoBase64());
             shop.setLogoObjectKey(null);
@@ -122,6 +126,14 @@ public class ShopController {
     private int validHsnLength(int value) {
         if (value != 4 && value != 6 && value != 8) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_HSN_LENGTH", "HSN length must be 4, 6, or 8");
         return value;
+    }
+
+    private String validPincode(String value) {
+        if (value == null || value.isBlank()) return null;
+        String normalized = value.trim();
+        if (!normalized.matches("[1-9][0-9]{5}"))
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_PINCODE", "PIN code must contain six digits and cannot start with zero");
+        return normalized;
     }
 
     @PreAuthorize("hasRole('SHOP_OWNER')")
@@ -165,6 +177,8 @@ class ShopUpdateRequest {
     private String legalName;
     private String state;
     private String address;
+    private String locality;
+    private String pincode;
     private String logoBase64;
     private String logoObjectKey;
     private String stateCode;
@@ -186,6 +200,8 @@ class ShopCreateRequest {
     private String legalName;
     private String state;
     private String address;
+    private String locality;
+    private String pincode;
     private String stateCode;
     private RegistrationType registrationType;
     private Integer hsnCodeLength;

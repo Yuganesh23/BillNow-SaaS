@@ -23,3 +23,11 @@ This document records calculation decisions; it is not tax advice. A practising 
 - Legacy shops with no valid GSTIN/state code are backfilled as state code `97` (Other Territory) to keep the additive migration deployable. Owners must select their actual state before issuing new tax documents.
 
 References to verify before launch: GST portal state/UT code list, GST invoice rules, and the business’s CA-approved treatment for composition, unregistered purchases, cess, exports and SEZ supplies.
+
+## Electronic compliance
+
+- E-invoice and e-way-bill features are disabled per shop by default.
+- BillNow validates the fields needed to form a provider-neutral request, but a selected GSP/IRP adapter must perform final schema validation before a production submission.
+- A generated IRN locks ordinary invoice cancellation. It must be cancelled through the compliance workflow inside the configured window.
+- The e-way-bill cancellation window is currently 24 hours from generation. A CA and the selected provider must verify this rule before production enablement.
+- BillNow does not decide whether a particular invoice is legally required to have an IRN or e-way bill. Operators remain responsible for applicability and thresholds.

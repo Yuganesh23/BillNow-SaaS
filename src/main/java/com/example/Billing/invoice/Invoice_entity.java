@@ -164,6 +164,10 @@ public class Invoice_entity {
     @Column(name = "cancellation_reason", length = 500)
     private String cancellationReason;
 
+    @Builder.Default
+    @Column(name = "compliance_locked", nullable = false)
+    private boolean complianceLocked = false;
+
     @Column(name = "financial_year", length = 7)
     private String financialYear;
 

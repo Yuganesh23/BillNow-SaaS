@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
-import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle } from 'lucide-react';
+import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle, ShieldCheck } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -14,11 +14,13 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
   const [showAddShop, setShowAddShop] = useState(false);
-  const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
+  const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', gstin: '', legalName: '', state: '' });
   const [editingShop, setEditingShop] = useState(null);
-  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', logoBase64: '', logoObjectKey: '', logoPreviewUrl: '', gstin: '', legalName: '', state: '' });
+  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', logoBase64: '', logoObjectKey: '', logoPreviewUrl: '', gstin: '', legalName: '', state: '' });
   const [whatsAppConfig, setWhatsAppConfig] = useState({ phoneNumberId: '', businessAccountId: '', accessToken: '', enabled: true, configured: false });
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [compliance, setCompliance] = useState({ eInvoiceEnabled: false, eWayBillEnabled: false, cancellationWindowHours: 24 });
+  const [savingCompliance, setSavingCompliance] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -52,6 +54,12 @@ export default function Settings() {
         } catch (error) {
           if (error.response?.status !== 404) console.error('Unable to load WhatsApp configuration', error);
         }
+        try {
+          const { data } = await axiosClient.get('/compliance/settings');
+          setCompliance(data);
+        } catch (error) {
+          console.error('Unable to load compliance configuration', error);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -84,6 +92,8 @@ export default function Settings() {
       email: shop.email || '',
       mobileNumber: shop.mobileNumber || '',
       address: shop.address || '',
+      locality: shop.locality || '',
+      pincode: shop.pincode || '',
       logoBase64: shop.logoBase64 || '',
       logoObjectKey: shop.logoObjectKey || '',
       logoPreviewUrl: shop.logoUrl || shop.logoBase64 || '',
@@ -100,7 +110,8 @@ export default function Settings() {
       const { id } = editShopData;
       const payload = {
         name: editShopData.name, invoiceName: editShopData.invoiceName, email: editShopData.email,
-        mobileNumber: editShopData.mobileNumber, address: editShopData.address, gstin: editShopData.gstin,
+        mobileNumber: editShopData.mobileNumber, address: editShopData.address, locality: editShopData.locality,
+        pincode: editShopData.pincode, gstin: editShopData.gstin,
         legalName: editShopData.legalName, state: editShopData.state,
         logoBase64: editShopData.logoBase64, logoObjectKey: editShopData.logoObjectKey,
       };
@@ -112,6 +123,16 @@ export default function Settings() {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to update branch.');
     }
+  };
+
+  const handleSaveCompliance = async (event) => {
+    event.preventDefault(); setSavingCompliance(true);
+    try {
+      const { data } = await axiosClient.put('/compliance/settings', compliance);
+      setCompliance(data); alert('Compliance settings saved.');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to save compliance settings.');
+    } finally { setSavingCompliance(false); }
   };
 
   const handleSaveWhatsApp = async (e) => {
@@ -183,7 +204,7 @@ export default function Settings() {
       await axiosClient.post('/shops', newShop);
       alert('New branch added successfully!');
       setShowAddShop(false);
-      setNewShop({ name: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
+      setNewShop({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', gstin: '', legalName: '', state: '' });
       fetchData();
       fetchBranches(); // refresh global dropdown
     } catch (e) {
@@ -307,6 +328,19 @@ export default function Settings() {
         )}
 
         {user?.role === 'SHOP_OWNER' && (
+          <form onSubmit={handleSaveCompliance} className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="flex items-center gap-2 text-lg font-medium text-slate-900"><ShieldCheck className="h-5 w-5 text-indigo-600" /> GST compliance</h2>
+            <p className="mt-1 text-sm text-slate-500">Enable these only after the active branch has complete GST, address, locality and PIN details. Production also requires an approved provider.</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <label className="flex items-center gap-3 rounded-md border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" checked={compliance.eInvoiceEnabled} onChange={(e) => setCompliance({ ...compliance, eInvoiceEnabled: e.target.checked })} /> E-invoicing</label>
+              <label className="flex items-center gap-3 rounded-md border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" checked={compliance.eWayBillEnabled} onChange={(e) => setCompliance({ ...compliance, eWayBillEnabled: e.target.checked })} /> E-way bills</label>
+              <label className="text-sm font-medium text-slate-700">IRN cancellation window (hours)<input type="number" min="1" max="168" value={compliance.cancellationWindowHours} onChange={(e) => setCompliance({ ...compliance, cancellationWindowHours: Number(e.target.value) })} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+            </div>
+            <button disabled={savingCompliance} className="mt-5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingCompliance ? 'Saving…' : 'Save compliance settings'}</button>
+          </form>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
           <form onSubmit={handleSaveWhatsApp} className="lg:col-span-2 bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
             <h2 className="text-lg font-medium text-slate-900 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-green-600" /> WhatsApp Cloud API</h2>
             <p className="mt-1 text-sm text-slate-500">Connect the active branch to Meta WhatsApp so invoice PDFs can be sent from the invoice screen.</p>
@@ -374,6 +408,10 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-slate-700">Branch Address</label>
                   <textarea rows="3" required value={newShop.address} onChange={e => setNewShop({...newShop, address: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Locality<input type="text" value={newShop.locality} onChange={e => setNewShop({...newShop, locality: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  <label className="block text-sm font-medium text-slate-700">PIN code<input type="text" inputMode="numeric" maxLength="6" value={newShop.pincode} onChange={e => setNewShop({...newShop, pincode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                   <button type="submit" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:col-start-2 sm:text-sm">
                     Create Branch
@@ -435,6 +473,10 @@ export default function Settings() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Address</label>
                   <textarea rows="2" required value={editShopData.address} onChange={e => setEditShopData({...editShopData, address: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Locality<input type="text" value={editShopData.locality} onChange={e => setEditShopData({...editShopData, locality: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  <label className="block text-sm font-medium text-slate-700">PIN code<input type="text" inputMode="numeric" maxLength="6" value={editShopData.pincode} onChange={e => setEditShopData({...editShopData, pincode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Branch Logo</label>
