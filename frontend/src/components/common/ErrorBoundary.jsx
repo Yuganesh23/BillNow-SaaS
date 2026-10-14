@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportFrontendError } from '../../utils/telemetry';
 
 export class ErrorBoundary extends React.Component {
   state = { failed: false };
@@ -9,6 +10,7 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('Application render failed', error, info);
+    reportFrontendError(error, { componentStack: info.componentStack });
   }
 
   render() {
