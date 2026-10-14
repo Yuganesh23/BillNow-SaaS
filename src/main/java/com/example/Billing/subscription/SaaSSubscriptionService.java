@@ -37,6 +37,7 @@ public class SaaSSubscriptionService {
     private final RazorpayProperties razorpayProperties;
 
     private final SaaSSubscriptionRepository subscriptionRepository;
+    private final SubscriptionWebhookEventRepository webhookEvents;
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
@@ -548,6 +549,9 @@ public class SaaSSubscriptionService {
             SaaSSubscription_entity subscription =
                     optional.get();
 
+            String eventId = WebhookEventIdentity.resolve(event, payload);
+            if (webhookEvents.existsByEventId(eventId)) return;
+
             // -------------------------------------------------
             // Process events
             // -------------------------------------------------
@@ -666,6 +670,14 @@ public class SaaSSubscriptionService {
                     subscription.isActive()
             );
             applyPlanToShop(shop, subscription);
+
+            webhookEvents.save(SubscriptionWebhookEvent.builder()
+                    .shop(shop)
+                    .subscription(subscription)
+                    .eventId(eventId)
+                    .eventType(eventName)
+                    .payloadHash(WebhookEventIdentity.hash(payload))
+                    .build());
 
         } catch (RazorpayException e) {
 
