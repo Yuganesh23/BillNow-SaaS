@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useLocale } from '../context/LocaleContext';
 
 export default function Dashboard() {
 
@@ -22,6 +23,7 @@ export default function Dashboard() {
   };
 
   const { user } = useAuth();
+  const { t } = useLocale();
   const [data, setData] = useState(null);
   const [onboarding, setOnboarding] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,8 +63,8 @@ export default function Dashboard() {
         <section className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900">Finish setting up BillNow</h2>
-              <p className="mt-1 text-sm text-slate-600">{onboarding.completedSteps} of {onboarding.totalSteps} steps complete</p>
+              <h2 className="font-semibold text-slate-900">{t('setupTitle')}</h2>
+              <p className="mt-1 text-sm text-slate-600">{onboarding.completedSteps} / {onboarding.totalSteps} {t('stepsComplete')}</p>
             </div>
             <span className="text-sm font-semibold text-indigo-700">{onboarding.percentComplete}%</span>
           </div>
@@ -90,20 +92,20 @@ export default function Dashboard() {
           to="/invoices/create" 
           className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
         >
-          Create Invoice
+          {t('createInvoice')}
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard 
-          title="Today's Revenue" 
+          title={t('todayRevenue')}
           value={`₹${(data?.todaySales || 0).toLocaleString()}`} 
           icon={IndianRupee}
           colorClass="bg-green-100 text-green-600"
         />
         <Link to="/invoices" className="block transform transition-transform hover:scale-105">
           <StatCard 
-            title="Total Invoices" 
+            title={t('totalInvoices')}
             value={data?.totalInvoices || 0} 
             icon={FileText}
             colorClass="bg-indigo-100 text-indigo-600"
@@ -111,7 +113,7 @@ export default function Dashboard() {
         </Link>
         <Link to="/customers" className="block transform transition-transform hover:scale-105">
           <StatCard 
-            title="Total Customers" 
+            title={t('totalCustomers')}
             value={data?.totalCustomers || 0} 
             icon={Users}
             colorClass="bg-blue-100 text-blue-600"
@@ -119,7 +121,7 @@ export default function Dashboard() {
         </Link>
         <Link to="/products" className="block transform transition-transform hover:scale-105">
           <StatCard 
-            title="Total Products" 
+            title={t('totalProducts')}
             value={data?.totalProducts || 0} 
             icon={Package}
             colorClass="bg-orange-100 text-orange-600"
@@ -127,7 +129,7 @@ export default function Dashboard() {
         </Link>
         <Link to="/products?filter=low-stock" className="block transform transition-transform hover:scale-105">
           <StatCard 
-            title="Low Stock Items" 
+            title={t('lowStock')}
             value={data?.lowStockProducts || 0} 
             icon={Package}
             colorClass="bg-red-100 text-red-600"
@@ -137,7 +139,7 @@ export default function Dashboard() {
 
       <div className="mt-8 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-medium text-slate-900">Recent Invoices</h2>
+          <h2 className="text-lg font-medium text-slate-900">{t('recentInvoices')}</h2>
         </div>
         
         {data?.recentInvoices && data.recentInvoices.length > 0 ? (
@@ -182,7 +184,7 @@ export default function Dashboard() {
         ) : (
           <div className="p-8 text-center">
             <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 mb-4">No invoices yet.</p>
+            <p className="text-slate-500 mb-4">{t('noInvoices')}</p>
             <Link to="/invoices/create" className="text-indigo-600 hover:text-indigo-500 font-medium">
               Create your first invoice
             </Link>

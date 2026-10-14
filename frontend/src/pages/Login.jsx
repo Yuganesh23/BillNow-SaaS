@@ -2,6 +2,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, LogIn, Eye, EyeOff, TrendingUp, Users, Zap } from 'lucide-react';
+import { LanguageSelector, useLocale } from '../context/LocaleContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLocale();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,6 +89,7 @@ export default function Login() {
       {/* Right Login Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-white overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:max-w-md">
+          <div className="mb-5 flex justify-end"><LanguageSelector className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm" /></div>
           {/* Mobile Header (Hidden on Desktop) */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center transform rotate-3">
@@ -97,10 +100,10 @@ export default function Login() {
 
           <div>
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Sign in to your account
+              {t('signInTitle')}
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Welcome back! Please enter your details.
+              {t('signInIntro')}
             </p>
           </div>
 
@@ -113,7 +116,7 @@ export default function Login() {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-slate-700">Email address</label>
+                <label className="block text-sm font-medium text-slate-700">{t('email')}</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-slate-400" />
@@ -131,10 +134,10 @@ export default function Login() {
 
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-slate-700">Password</label>
+                  <label className="block text-sm font-medium text-slate-700">{t('password')}</label>
                   <div className="text-sm">
                     <Link to="/forgot-password" className="font-medium text-green-600 hover:text-green-500 transition-colors">
-                      Forgot password?
+                      {t('forgotPassword')}
                     </Link>
                   </div>
                 </div>
@@ -166,15 +169,15 @@ export default function Login() {
                   disabled={isSubmitting}
                   className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all hover:shadow-md"
                 >
-                  {isSubmitting ? 'Signing in...' : 'Sign in'}
+                  {isSubmitting ? t('signingIn') : t('signIn')}
                   {!isSubmitting && <LogIn className="ml-2 h-5 w-5" />}
                 </button>
               </div>
               
               <div className="text-center text-sm pt-2">
-                <span className="text-slate-600">Don't have an account? </span>
+                <span className="text-slate-600">{t('noAccount')} </span>
                 <Link to="/register" className="font-semibold text-green-600 hover:text-green-500 transition-colors">
-                  Sign up for free
+                  {t('signUp')}
                 </Link>
               </div>
             </form>

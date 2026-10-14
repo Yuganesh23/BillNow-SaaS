@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { LocaleProvider } from './context/LocaleContext';
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -43,7 +44,7 @@ function RootRedirect() {
 
 function App() {
   return (
-    <AuthProvider>
+    <LocaleProvider><AuthProvider>
       <BranchProvider>
       <BrowserRouter>
         <Suspense fallback={<div className="min-h-screen grid place-items-center text-slate-600">Loading BillNow…</div>}>
@@ -89,7 +90,7 @@ function App() {
         </Suspense>
       </BrowserRouter>
       </BranchProvider>
-    </AuthProvider>
+    </AuthProvider></LocaleProvider>
   );
 }
 

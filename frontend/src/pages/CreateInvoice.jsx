@@ -8,6 +8,7 @@ import { calculateInvoiceTotals } from '../utils/invoiceCalc';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
 import { canQueueInvoice, queueInvoice } from '../utils/offlineInvoiceQueue';
+import { useLocale } from '../context/LocaleContext';
 import { Plus, Trash2, ArrowLeft, Save, QrCode } from 'lucide-react';
 import QRScannerModal from '../components/QRScannerModal';
 import { Link } from 'react-router-dom';
@@ -16,6 +17,7 @@ export default function CreateInvoice() {
   const navigate = useNavigate();
   const { branches, activeBranchId } = useBranch();
   const { user } = useAuth();
+  const { t } = useLocale();
   const formRef = useRef(null);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -185,7 +187,7 @@ export default function CreateInvoice() {
           <Link to="/invoices" className="mr-4 text-slate-400 hover:text-slate-600">
             <ArrowLeft className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Create Invoice</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('createInvoice')}</h1>
         </div>
       </div>
 
@@ -194,10 +196,10 @@ export default function CreateInvoice() {
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
         {/* Customer Section */}
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Customer Details</h2>
+          <h2 className="text-lg font-medium text-slate-900 mb-4">{t('customerDetails')}</h2>
           <div className="max-w-md flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-700">Select Customer <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700">{t('selectCustomer')} <span className="text-red-500">*</span></label>
               <select
                 required
                 value={selectedCustomerId}
@@ -223,7 +225,7 @@ export default function CreateInvoice() {
 
         {/* Items Section */}
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Invoice Items</h2>
+          <h2 className="text-lg font-medium text-slate-900 mb-4">{t('invoiceItems')}</h2>
           
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 mb-4">
@@ -294,7 +296,7 @@ export default function CreateInvoice() {
               className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Item
+              {t('addItem')}
             </button>
             <button
               type="button"
@@ -302,7 +304,7 @@ export default function CreateInvoice() {
               className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
             >
               <QrCode className="w-4 h-4 mr-2" />
-              Scan Barcode
+              {t('scanBarcode')}
             </button>
           </div>
         </div>
@@ -349,15 +351,15 @@ export default function CreateInvoice() {
           
           <div className="w-full md:w-1/3 space-y-3">
             <div className="flex justify-between text-sm text-slate-600">
-              <span>Subtotal</span>
+              <span>{t('subtotal')}</span>
               <span>₹{totals.subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm text-slate-600">
-              <span>Discount</span>
+              <span>{t('discount')}</span>
               <span className="text-red-500">-₹{totals.discountAmount.toLocaleString()}</span>
             </div>
             <div className="pt-3 border-t border-slate-200 flex justify-between">
-              <span className="text-base font-medium text-slate-900">Grand Total</span>
+              <span className="text-base font-medium text-slate-900">{t('grandTotal')}</span>
               <span className="text-xl font-bold text-indigo-600">₹{totals.totalAmount.toLocaleString()}</span>
             </div>
           </div>
@@ -369,7 +371,7 @@ export default function CreateInvoice() {
             disabled={!isValid || isSubmitting}
             className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Saving...' : 'Save & Create Invoice'}
+            {isSubmitting ? t('saving') : t('saveInvoice')}
             {!isSubmitting && <Save className="ml-2 w-5 h-5" />}
           </button>
         </div>
