@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { Building2 } from 'lucide-react';
+import { OfflineQueueStatus } from '../common/OfflineQueueStatus';
 import { 
   LayoutDashboard, 
   Package, 
@@ -150,6 +151,7 @@ export const AppLayout = () => {
           </div>
           
           <div className="flex items-center">
+            <OfflineQueueStatus />
             <span className="text-sm font-medium text-slate-700">{user?.name || 'User'}</span>
             <div className="w-8 h-8 ml-3 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
               {(user?.name || 'U').charAt(0)}

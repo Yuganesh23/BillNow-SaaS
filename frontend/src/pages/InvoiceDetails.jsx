@@ -25,6 +25,7 @@ export default function InvoiceDetails() {
   const [eWayBill, setEWayBill] = useState(null);
   const [complianceBusy, setComplianceBusy] = useState(false);
   const [showTransport, setShowTransport] = useState(false);
+  const [printSize, setPrintSize] = useState('A4');
   const [transport, setTransport] = useState({ transporterId: '', transporterName: '', transportDocumentNumber: '', transportDocumentDate: '', transportMode: 'ROAD', vehicleNumber: '', vehicleType: 'REGULAR', distanceKm: '' });
 
   useEffect(() => {
@@ -126,6 +127,23 @@ export default function InvoiceDetails() {
     } finally { setComplianceBusy(false); }
   };
 
+  const handlePrint = () => {
+    const style = document.createElement('style');
+    style.dataset.billnowPrint = 'true';
+    style.textContent = printSize === 'A4'
+      ? '@page { size: A4; margin: 12mm; }'
+      : `@page { size: ${printSize === '58' ? '58mm' : '80mm'} auto; margin: 3mm; }`;
+    document.head.appendChild(style);
+    document.body.dataset.printSize = printSize;
+    const clean = () => {
+      style.remove();
+      delete document.body.dataset.printSize;
+      window.removeEventListener('afterprint', clean);
+    };
+    window.addEventListener('afterprint', clean);
+    window.print();
+  };
+
   if (loading) return <LoadingState message="Loading invoice..." />;
   if (error || !invoice) return <div className="p-8 text-red-500">{error || 'Invoice not found.'}</div>;
 
@@ -144,7 +162,10 @@ export default function InvoiceDetails() {
           <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${invoice.status === 'PAID' ? 'bg-green-100 text-green-800' : invoice.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>{invoice.status}</span>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
-          <button type="button" onClick={() => window.print()} className="invoice-action"><Printer className="w-4 h-4" /> Print</button>
+          <select aria-label="Print paper size" value={printSize} onChange={(event) => setPrintSize(event.target.value)} className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm">
+            <option value="A4">A4</option><option value="80">80 mm</option><option value="58">58 mm</option>
+          </select>
+          <button type="button" onClick={handlePrint} className="invoice-action"><Printer className="w-4 h-4" /> Print</button>
           <button type="button" onClick={handleDownloadPDF} className="invoice-action"><Download className="w-4 h-4" /> PDF</button>
           <button type="button" onClick={handleWhatsApp} disabled={sendingWhatsApp} className="invoice-action border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"><MessageCircle className="w-4 h-4" /> {sendingWhatsApp ? 'Sending…' : 'WhatsApp'}</button>
         </div>
@@ -173,7 +194,7 @@ export default function InvoiceDetails() {
         </section>
       )}
 
-      <article className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-5 sm:p-7 print:shadow-none print:ring-0">
+      <article className="invoice-document bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-5 sm:p-7 print:shadow-none print:ring-0">
         <header className="grid grid-cols-1 gap-5 border-b border-slate-200 pb-5 sm:grid-cols-[auto_1fr_auto] sm:items-start">
           <div className="flex sm:w-28 sm:justify-start">
             {logoUrl ? <img src={logoUrl} alt={`${displayName} logo`} className="h-16 max-w-28 object-contain" /> : <div className="h-16 w-16 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">Logo</div>}

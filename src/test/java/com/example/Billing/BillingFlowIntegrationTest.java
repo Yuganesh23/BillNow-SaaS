@@ -73,6 +73,22 @@ class BillingFlowIntegrationTest {
     }
 
     @Test
+    void offlineReplayWithSameIdempotencyKeyDoesNotDuplicateInvoiceOrStockReduction() {
+        var tenant = fixture.createTenant("Offline replay");
+        CreateInvoiceRequest_Dto request = invoiceRequest(tenant, 2.0, "0");
+
+        InvoiceResponse_Dto first = inTenant(tenant,
+                () -> invoiceService.createInvoice(tenant.owner(), request, "offline-stable-key"));
+        InvoiceResponse_Dto replay = inTenant(tenant,
+                () -> invoiceService.createInvoice(tenant.owner(), request, "offline-stable-key"));
+
+        assertThat(replay.getId()).isEqualTo(first.getId());
+        assertThat(invoices.findByShopIdOrderByCreatedAtDesc(tenant.shop().getId())).hasSize(1);
+        assertThat(products.findByIdAndShopId(tenant.product().getId(), tenant.shop().getId())
+                .orElseThrow().getStockQuantity()).isEqualTo(98.0);
+    }
+
+    @Test
     void insufficientStockRollsBackInvoiceAndStock() {
         var tenant = fixture.createTenant("Insufficient");
         tenant.product().setStockQuantity(1.0);

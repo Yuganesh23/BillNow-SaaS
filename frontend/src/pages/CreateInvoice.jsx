@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomers, createCustomer } from '../api/customerApi';
 import { getProducts } from '../api/productApi';
@@ -6,6 +6,8 @@ import { createInvoice } from '../api/invoiceApi';
 import { createPayment } from '../api/paymentApi';
 import { calculateInvoiceTotals } from '../utils/invoiceCalc';
 import { useBranch } from '../context/BranchContext';
+import { useAuth } from '../context/AuthContext';
+import { canQueueInvoice, queueInvoice } from '../utils/offlineInvoiceQueue';
 import { Plus, Trash2, ArrowLeft, Save, QrCode } from 'lucide-react';
 import QRScannerModal from '../components/QRScannerModal';
 import { Link } from 'react-router-dom';
@@ -13,6 +15,8 @@ import { Link } from 'react-router-dom';
 export default function CreateInvoice() {
   const navigate = useNavigate();
   const { branches, activeBranchId } = useBranch();
+  const { user } = useAuth();
+  const formRef = useRef(null);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   
@@ -28,6 +32,7 @@ export default function CreateInvoice() {
   const [newCustomer, setNewCustomer] = useState({ name: '', whatsappNumber: '', email: '', address: '', gstin: '', state: '' });
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState('');
 
   const handleAddCustomer = async () => {
     setIsAddingCustomer(true);
@@ -110,13 +115,29 @@ export default function CreateInvoice() {
                   items.every(item => item.productId && item.quantity > 0) &&
                   items.length > 0;
 
+  useEffect(() => {
+    const shortcuts = (event) => {
+      if (event.key === 'F2') {
+        event.preventDefault();
+        setShowScanner(true);
+      } else if (event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        handleAddItem();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    };
+    window.addEventListener('keydown', shortcuts);
+    return () => window.removeEventListener('keydown', shortcuts);
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isValid) return;
     
     setIsSubmitting(true);
-    try {
-      const payload = {
+    const payload = {
           customerId: parseInt(selectedCustomerId),
           items: totals.items.map(item => ({
             productId: parseInt(item.productId),
@@ -134,7 +155,7 @@ export default function CreateInvoice() {
           igstTotal: totals.igstTotal || 0,
           isInterState: totals.isInterState || false
         };
-      
+    try {
       const response = await createInvoice(payload);
       if (paymentMethod) {
           await createPayment({
@@ -144,8 +165,15 @@ export default function CreateInvoice() {
           });
         }
         navigate(`/invoices/${response.id}`);
-    } catch  {
-      alert('Failed to create invoice');
+    } catch (error) {
+      if (canQueueInvoice(error) && 'indexedDB' in window) {
+        const queued = await queueInvoice({ payload, branchId: activeBranchId, userKey: user?.email || String(user?.id || '') });
+        setOfflineNotice(`${queued.temporaryReference} is saved on this device and will sync when the connection returns. It will remain unpaid until you record payment after sync.`);
+        setItems([{ id: Date.now(), productId: '', quantity: 1, product: null }]);
+        setSelectedCustomerId('');
+      } else {
+        alert(error.response?.data?.message || 'Failed to create invoice');
+      }
       setIsSubmitting(false);
     }
   };
@@ -161,7 +189,9 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      {offlineNotice && <div role="status" className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{offlineNotice}</div>}
+      <div className="mb-4 text-xs text-slate-500">Shortcuts: F2 scan · Alt+A add item · Ctrl+Enter save</div>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
         {/* Customer Section */}
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
           <h2 className="text-lg font-medium text-slate-900 mb-4">Customer Details</h2>

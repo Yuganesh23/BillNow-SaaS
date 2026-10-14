@@ -1,0 +1,12 @@
+{
+  "name": "BillNow GST Billing",
+  "short_name": "BillNow",
+  "description": "GST billing, inventory, purchases and payments for Indian businesses.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

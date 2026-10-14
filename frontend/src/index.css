@@ -98,3 +98,34 @@ body {
 .invoice-action:hover {
   background: var(--color-bg-secondary);
 }
+@media print {
+  body[data-print-size='80'] .invoice-document,
+  body[data-print-size='58'] .invoice-document {
+    width: 100%;
+    padding: 0 !important;
+    font-size: 10px;
+  }
+
+  body[data-print-size='80'] .invoice-document header,
+  body[data-print-size='58'] .invoice-document header {
+    display: block;
+    text-align: left;
+  }
+
+  body[data-print-size='80'] .invoice-document table th:nth-child(2),
+  body[data-print-size='80'] .invoice-document table td:nth-child(2),
+  body[data-print-size='58'] .invoice-document table th:nth-child(2),
+  body[data-print-size='58'] .invoice-document table td:nth-child(2) {
+    display: none;
+  }
+
+  body[data-print-size='58'] .invoice-document {
+    font-size: 8px;
+  }
+
+  body[data-print-size='80'] .invoice-document footer,
+  body[data-print-size='58'] .invoice-document footer {
+    margin-top: 12px;
+    padding-top: 8px;
+  }
+}

@@ -26,7 +26,7 @@ export const getInvoiceById = async (id) => {
   return response.data;
 };
 
-export const createInvoice = async (invoiceData) => {
+export const createInvoice = async (invoiceData, idempotencyKey = crypto.randomUUID()) => {
   if (isMock) {
     return new Promise(resolve => {
       setTimeout(() => {
@@ -37,7 +37,7 @@ export const createInvoice = async (invoiceData) => {
     });
   }
   const response = await axiosClient.post('/invoices', invoiceData, {
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    headers: { 'Idempotency-Key': idempotencyKey },
   });
   return response.data;
 };
