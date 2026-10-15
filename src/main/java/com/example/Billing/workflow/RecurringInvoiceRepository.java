@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 public interface RecurringInvoiceRepository extends JpaRepository<RecurringInvoice_entity, Long> {
+    List<RecurringInvoice_entity> findByShopIdOrderByIdDesc(Long shopId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RecurringInvoice_entity r where r.id=:id and r.shop.id=:shopId")
     Optional<RecurringInvoice_entity> findByIdAndShopIdForUpdate(@Param("id") Long id, @Param("shopId") Long shopId);

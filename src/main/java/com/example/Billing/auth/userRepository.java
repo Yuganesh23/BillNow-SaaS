@@ -21,4 +21,5 @@ public interface userRepository
     Optional<User_entity> findByIdAndShopId(Long id, Long shopId);
     List<User_entity> findByShopIdAndRoleIn(Long shopId, List<String> roles);
     long countByShopIdAndActiveTrue(Long shopId);
+    List<User_entity> findByShopId(Long shopId);
 }

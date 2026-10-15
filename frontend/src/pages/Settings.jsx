@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
-import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle, ShieldCheck, Download, FileJson } from 'lucide-react';
+import { filenameFromDisposition, saveBlob } from '../utils/fileDownload';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -21,6 +22,8 @@ export default function Settings() {
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [compliance, setCompliance] = useState({ eInvoiceEnabled: false, eWayBillEnabled: false, cancellationWindowHours: 24 });
   const [savingCompliance, setSavingCompliance] = useState(false);
+  const [downloadingExport, setDownloadingExport] = useState('');
+  const [exportStatus, setExportStatus] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -213,6 +216,21 @@ export default function Settings() {
     }
   };
 
+  const downloadShopExport = async (format) => {
+    setDownloadingExport(format);
+    setExportStatus('');
+    try {
+      const response = await axiosClient.get(`/data-export/shop.${format}`, { responseType: 'blob' });
+      const fallback = `billnow-shop-export.${format}`;
+      saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], fallback));
+      setExportStatus(`${format.toUpperCase()} export downloaded for the active branch.`);
+    } catch (error) {
+      setExportStatus(error.response?.data?.message || 'Unable to download the shop export. Please try again.');
+    } finally {
+      setDownloadingExport('');
+    }
+  };
+
   if (loading) return <div className="p-4 sm:p-6 lg:p-8">Loading...</div>;
 
   return (
@@ -358,6 +376,18 @@ export default function Settings() {
             <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={whatsAppConfig.enabled} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, enabled: e.target.checked })} /> Enable invoice sending</label>
             <button disabled={savingWhatsApp} className="mt-5 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">{savingWhatsApp ? 'Saving...' : 'Save WhatsApp settings'}</button>
           </form>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
+          <section className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200" aria-labelledby="data-export-heading">
+            <h2 id="data-export-heading" className="flex items-center gap-2 text-lg font-medium text-slate-900"><Download className="h-5 w-5 text-indigo-600" /> Export active branch</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-500">Download a portable copy of shop settings, users, products, parties, invoices, payments and purchases. Secrets, password hashes and provider credentials are excluded.</p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => downloadShopExport('zip')} disabled={Boolean(downloadingExport)} className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"><Download className="h-4 w-4" />{downloadingExport === 'zip' ? 'Preparing ZIP…' : 'Download ZIP + CSV'}</button>
+              <button type="button" onClick={() => downloadShopExport('json')} disabled={Boolean(downloadingExport)} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileJson className="h-4 w-4" />{downloadingExport === 'json' ? 'Preparing JSON…' : 'Download JSON'}</button>
+            </div>
+            {exportStatus && <p className="mt-3 text-sm font-medium text-slate-700" role="status">{exportStatus}</p>}
+          </section>
         )}
 
       {/* Add Branch Modal */}

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 @Repository
 public interface SupplierLedgerRepository extends JpaRepository<SupplierLedger_entity, Long> {
+    List<SupplierLedger_entity> findByShopIdOrderByTransactionDateDesc(Long shopId);
     List<SupplierLedger_entity> findBySupplierIdOrderByTransactionDateDesc(Long supplierId);
     List<SupplierLedger_entity> findByPurchaseIdOrderByTransactionDateDesc(Long purchaseId);
 }

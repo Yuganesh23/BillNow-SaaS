@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface EWayBillRecordRepository extends JpaRepository<EWayBillRecord, Long> {
     Optional<EWayBillRecord> findByInvoiceIdAndShopId(Long invoiceId, Long shopId);
+    List<EWayBillRecord> findByShopIdOrderByUpdatedAtDesc(Long shopId);
     List<EWayBillRecord> findTop100ByShopIdOrderByUpdatedAtDesc(Long shopId);
 }
