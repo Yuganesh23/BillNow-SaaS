@@ -5,4 +5,4 @@ Disallow: /settings
 Disallow: /invoices
 Disallow: /customers
 Disallow: /products
-Sitemap: https://billnow.vercel.app/sitemap.xml
+Sitemap: https://www.xenbill.app/sitemap.xml
