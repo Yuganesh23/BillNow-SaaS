@@ -11,3 +11,11 @@ test('Vercel serves the app with required security headers', async () => {
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/);
   assert.equal(headers['X-Content-Type-Options'], 'nosniff');
 });
+
+test('SPA fallback never intercepts API proxy routes', async () => {
+  const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const fallback = config.rewrites.find(({ destination }) => destination === '/index.html');
+
+  assert.ok(fallback, 'missing SPA fallback');
+  assert.match(fallback.source, /\(\?!api\//, 'SPA fallback must exclude /api/*');
+});
