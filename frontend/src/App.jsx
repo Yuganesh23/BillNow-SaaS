@@ -30,6 +30,7 @@ const PurchaseForm = lazy(() => import('./pages/PurchaseForm'));
 const PurchaseDetails = lazy(() => import('./pages/PurchaseDetails'));
 const Workflows = lazy(() => import('./pages/Workflows'));
 const Imports = lazy(() => import('./pages/Imports'));
+const CustomerPortal = lazy(() => import('./pages/CustomerPortal'));
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -54,6 +55,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/signup" element={<Register />} />
+          <Route path="/portal" element={<CustomerPortal />} />
           
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>

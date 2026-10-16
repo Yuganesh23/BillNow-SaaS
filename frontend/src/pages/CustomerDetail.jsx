@@ -1,17 +1,49 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getCustomers } from '../api/customerApi';
+import { getCustomers, createCustomerPortalLink, revokeCustomerPortalLink } from '../api/customerApi';
 import { getInvoices } from '../api/invoiceApi';
 import { LoadingState } from '../components/common/States';
-import { ArrowLeft, Clock, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Clock, Copy, Link2, ShoppingBag, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 export default function CustomerDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [customer, setCustomer] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [frequentProducts, setFrequentProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [portalLink, setPortalLink] = useState(null);
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [portalMessage, setPortalMessage] = useState('');
+
+  const createPortalLink = async () => {
+    setPortalBusy(true);
+    setPortalMessage('');
+    try {
+      const result = await createCustomerPortalLink(id);
+      setPortalLink(result);
+      setPortalMessage('A new link was created. Any previous link is now revoked.');
+    } catch (error) {
+      setPortalMessage(error.response?.data?.message || 'Could not create the portal link.');
+    } finally {
+      setPortalBusy(false);
+    }
+  };
+
+  const revokePortalLink = async () => {
+    setPortalBusy(true);
+    try {
+      await revokeCustomerPortalLink(id);
+      setPortalLink(null);
+      setPortalMessage('Customer portal access revoked.');
+    } catch (error) {
+      setPortalMessage(error.response?.data?.message || 'Could not revoke portal access.');
+    } finally {
+      setPortalBusy(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,14 +96,37 @@ export default function CustomerDetail() {
         <Link to="/customers" className="mr-4 text-slate-400 hover:text-slate-600">
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-slate-900">{customer.name}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {customer.whatsappNumber} | {customer.email || 'No Email'}
           </p>
           {customer.address && <p className="mt-1 text-sm text-slate-500">Address: {customer.address}</p>}
         </div>
+        {user?.role === 'SHOP_OWNER' && <button onClick={createPortalLink} disabled={portalBusy}
+          className="ml-4 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+          <Link2 className="h-4 w-4" /> {portalBusy ? 'Working…' : 'Create portal link'}
+        </button>}
       </div>
+
+      {(portalLink || portalMessage) && (
+        <section className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold text-slate-900">Customer invoice portal</h2>
+              {portalMessage && <p className="mt-1 text-sm text-slate-600">{portalMessage}</p>}
+              {portalLink && <>
+                <p className="mt-3 break-all rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-indigo-100">{portalLink.url}</p>
+                <p className="mt-2 text-xs text-slate-500">Expires {format(new Date(portalLink.expiresAt), 'PPp')}. The full link is shown only now.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => navigator.clipboard.writeText(portalLink.url)} className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-indigo-700 ring-1 ring-indigo-200"><Copy className="h-4 w-4" /> Copy link</button>
+                  <button onClick={revokePortalLink} disabled={portalBusy} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"><X className="h-4 w-4" /> Revoke access</button>
+                </div>
+              </>}
+            </div>
+          </div>
+        </section>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">

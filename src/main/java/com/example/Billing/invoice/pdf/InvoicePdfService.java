@@ -60,6 +60,20 @@ public class InvoicePdfService {
                 .findByIdAndShopId(invoiceId, shopContextResolver.resolveActiveShop(user).getId())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
+
+        return renderInvoicePdf(invoice);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateInvoicePdfForPortal(Long invoiceId, Long shopId, Long customerId) {
+        Invoice_entity invoice = invoiceRepository.findByIdAndShopId(invoiceId, shopId)
+                .filter(value -> value.getCustomer().getId().equals(customerId))
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
+        return renderInvoicePdf(invoice);
+    }
+
+    private byte[] renderInvoicePdf(Invoice_entity invoice) {
         
         Shop_entity shop = invoice.getShop();
         boolean hasShopGst = shop.getGstin() != null && !shop.getGstin().isEmpty();
@@ -262,7 +276,7 @@ public class InvoicePdfService {
             leftTotalCell.setBorder(Rectangle.NO_BORDER);
             
             String paymentMethodStr = "";
-            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findFirstByInvoiceIdOrderByPaidAtDesc(invoiceId);
+            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findFirstByInvoiceIdOrderByPaidAtDesc(invoice.getId());
             if (paymentOpt.isPresent() && paymentOpt.get().getPaymentMethod() != null) {
                 paymentMethodStr = paymentOpt.get().getPaymentMethod().name();
             }

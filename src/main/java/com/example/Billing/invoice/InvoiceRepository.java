@@ -15,6 +15,8 @@ public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> 
 
     List<Invoice_entity> findByShopIdOrderByCreatedAtDesc(Long shopId);
 
+    List<Invoice_entity> findByCustomerIdAndShopIdOrderByCreatedAtDesc(Long customerId, Long shopId);
+
     Optional<Invoice_entity> findByIdAndShopId(
             Long invoiceId,
             Long shopId
