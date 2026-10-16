@@ -22,4 +22,5 @@ public class BillerRequest_Dto {
     
     private String password;
     private String mobileNumber;
+    private Role role;
 }

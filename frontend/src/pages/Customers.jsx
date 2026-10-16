@@ -7,13 +7,13 @@ import { Users, Plus, Search, Edit2, Trash2, Phone } from 'lucide-react';
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [,setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', whatsappNumber: '', email: '', address: ''
+    name: '', whatsappNumber: '', email: '', address: '', locality: '', pincode: '', gstin: '', stateCode: '', billingAddress: '', shippingAddress: ''
   });
 
   const fetchCustomers = async () => {
@@ -21,7 +21,7 @@ export default function Customers() {
     try {
       const data = await getCustomers();
       setCustomers(data);
-    } catch (err) {
+    } catch  {
       setError('Failed to load customers');
     } finally {
       setLoading(false);
@@ -39,11 +39,12 @@ export default function Customers() {
         name: customer.name, 
         whatsappNumber: customer.whatsappNumber, 
         email: customer.email || '', 
-        address: customer.address || ''
+        address: customer.address || '', locality: customer.locality || '', pincode: customer.pincode || '',
+        gstin: customer.gstin || '', stateCode: customer.stateCode || '', billingAddress: customer.billingAddress || '', shippingAddress: customer.shippingAddress || ''
       });
     } else {
       setEditingCustomer(null);
-      setFormData({ name: '', whatsappNumber: '', email: '', address: '' });
+      setFormData({ name: '', whatsappNumber: '', email: '', address: '', locality: '', pincode: '', gstin: '', stateCode: '', billingAddress: '', shippingAddress: '' });
     }
     setIsModalOpen(true);
   };
@@ -55,6 +56,12 @@ export default function Customers() {
         ...formData,
         email: formData.email.trim() === '' ? null : formData.email,
         address: formData.address.trim() === '' ? null : formData.address,
+        locality: formData.locality.trim() === '' ? null : formData.locality,
+        pincode: formData.pincode.trim() === '' ? null : formData.pincode,
+        gstin: formData.gstin.trim() === '' ? null : formData.gstin.toUpperCase(),
+        stateCode: formData.stateCode.trim() === '' ? null : formData.stateCode,
+        billingAddress: formData.billingAddress.trim() === '' ? null : formData.billingAddress,
+        shippingAddress: formData.shippingAddress.trim() === '' ? null : formData.shippingAddress,
       };
       
       if (editingCustomer) {
@@ -74,7 +81,7 @@ export default function Customers() {
       try {
         await deleteCustomer(id);
         fetchCustomers();
-      } catch (err) {
+      } catch  {
         alert('Failed to delete customer');
       }
     }
@@ -133,7 +140,7 @@ export default function Customers() {
           }
         />
       ) : (
-        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
+        <div className="mobile-table-scroll bg-white shadow-sm ring-1 ring-slate-200 rounded-lg">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
@@ -204,6 +211,22 @@ export default function Customers() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Address</label>
                     <textarea rows="3" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="mt-1 block w-full bg-white text-slate-900 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block text-sm font-medium text-slate-700">Locality<input value={formData.locality} onChange={e => setFormData({...formData, locality: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                    <label className="block text-sm font-medium text-slate-700">PIN code<input inputMode="numeric" maxLength="6" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  </div>
+                  <div className="grid grid-cols-[1fr_7rem] gap-3">
+                    <label className="block text-sm font-medium text-slate-700">GSTIN<input maxLength="15" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 uppercase" /></label>
+                    <label className="block text-sm font-medium text-slate-700">State code<input inputMode="numeric" maxLength="2" value={formData.stateCode} onChange={e => setFormData({...formData, stateCode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Billing address</label>
+                    <textarea rows="2" value={formData.billingAddress} onChange={e => setFormData({...formData, billingAddress: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Shipping address</label>
+                    <textarea rows="2" value={formData.shippingAddress} onChange={e => setFormData({...formData, shippingAddress: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" />
                   </div>
                   <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                     <button type="submit" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm">

@@ -1,13 +1,17 @@
 package com.example.Billing.customer;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.example.Billing.gst.GstinValidator;
+import com.example.Billing.gst.IndianState;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +46,7 @@ public class CustomerService {
             );
         }
 
+        String stateCode = resolveStateCode(request.getGstin(), request.getStateCode(), shop.getStateCode());
         Customer_entity customer =
                 Customer_entity.builder()
                         .shop(shop)
@@ -51,6 +56,12 @@ public class CustomerService {
                         )
                         .email(request.getEmail())
                         .address(request.getAddress())
+                        .locality(request.getLocality())
+                        .pincode(request.getPincode())
+                        .gstin(normalizeGstin(request.getGstin()))
+                        .stateCode(stateCode)
+                        .billingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress())
+                        .shippingAddress(request.getShippingAddress())
                         .build();
 
         Customer_entity savedCustomer =
@@ -97,11 +108,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
         return mapToResponse(customer);
     }
@@ -125,11 +132,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
 
         // Check whether WhatsApp number belongs
@@ -167,6 +170,12 @@ public class CustomerService {
         customer.setAddress(
                 request.getAddress()
         );
+        customer.setLocality(request.getLocality());
+        customer.setPincode(request.getPincode());
+        customer.setGstin(normalizeGstin(request.getGstin()));
+        customer.setStateCode(resolveStateCode(request.getGstin(), request.getStateCode(), shop.getStateCode()));
+        customer.setBillingAddress(request.getBillingAddress() != null ? request.getBillingAddress() : request.getAddress());
+        customer.setShippingAddress(request.getShippingAddress());
 
         Customer_entity updatedCustomer =
                 customerRepository.save(customer);
@@ -192,11 +201,7 @@ public class CustomerService {
                                 customerId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> customerNotFound());
 
         customerRepository.delete(customer);
     }
@@ -232,6 +237,10 @@ public class CustomerService {
         }
 
         return shopContextResolver.resolveActiveShop(user);
+    }
+
+    private AppException customerNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found");
     }
 
 
@@ -270,7 +279,31 @@ public class CustomerService {
                 .address(
                         customer.getAddress()
                 )
+                .locality(customer.getLocality())
+                .pincode(customer.getPincode())
+                .gstin(customer.getGstin())
+                .stateCode(customer.getStateCode())
+                .billingAddress(customer.getBillingAddress())
+                .shippingAddress(customer.getShippingAddress())
 
                 .build();
+    }
+
+    private String normalizeGstin(String gstin) {
+        if (gstin == null || gstin.isBlank()) return null;
+        String normalized = gstin.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!GstinValidator.isValid(normalized)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_GSTIN", "GSTIN is invalid");
+        }
+        return normalized;
+    }
+
+    private String resolveStateCode(String gstin, String manual, String fallback) {
+        if (gstin != null && !gstin.isBlank()) return GstinValidator.stateCode(normalizeGstin(gstin));
+        String code = manual != null && !manual.isBlank() ? manual : fallback;
+        if (IndianState.fromCode(code).isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STATE_CODE", "Select a valid Indian state or UT");
+        }
+        return code;
     }
 }

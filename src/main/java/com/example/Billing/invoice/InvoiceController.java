@@ -23,17 +23,22 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
     private final InvoicePdfService invoicePdfService;
     private final WhatsAppService whatsAppService;
+    private final DocumentNoteService documentNoteService;
+    private final com.example.Billing.workflow.UpiPaymentLinkService upiPaymentLinkService;
+    private final com.example.Billing.config.ShopContextResolver shopContextResolver;
 
 
     // =====================================================
     // CREATE INVOICE
     // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER')")
     @PostMapping
     public ResponseEntity<InvoiceResponse_Dto> createInvoice(
 
             Authentication authentication,
+
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
 
             @Valid
             @RequestBody
@@ -48,7 +53,8 @@ public class InvoiceController {
         InvoiceResponse_Dto response =
                 invoiceService.createInvoice(
                         user,
-                        request
+                        request,
+                        idempotencyKey
                 );
 
 
@@ -57,12 +63,36 @@ public class InvoiceController {
                 .body(response);
     }
 
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
+    @PostMapping("/{invoiceId}/notes")
+    public ResponseEntity<DocumentNoteService.NoteResponse> createNote(Authentication authentication,
+            @PathVariable Long invoiceId, @RequestBody DocumentNoteService.NoteRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(documentNoteService.create(
+                getAuthenticatedUser(authentication), invoiceId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER', 'VIEWER')")
+    @GetMapping("/{invoiceId}/notes")
+    public ResponseEntity<List<DocumentNoteService.NoteResponse>> listNotes(Authentication authentication,
+            @PathVariable Long invoiceId) {
+        return ResponseEntity.ok(documentNoteService.list(getAuthenticatedUser(authentication), invoiceId));
+    }
+
+    @GetMapping("/{invoiceId}/upi-link")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER','MANAGER','BILLER','VIEWER')")
+    public ResponseEntity<String> upiLink(Authentication authentication, @PathVariable Long invoiceId) {
+        InvoiceResponse_Dto invoice = invoiceService.getInvoice(getAuthenticatedUser(authentication), invoiceId);
+        User_entity user = getAuthenticatedUser(authentication);
+        com.example.Billing.shop.Shop_entity shop = shopContextResolver.resolveActiveShop(user);
+        return ResponseEntity.ok(upiPaymentLinkService.create(shop.getUpiId(), shop.getName(), invoice.getTotalAmount(), invoice.getInvoiceNumber()));
+    }
+
 
     // =====================================================
     // GET ALL INVOICES
     // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER', 'VIEWER')")
     @GetMapping
     public ResponseEntity<List<InvoiceResponse_Dto>>
     getAllInvoices(
@@ -87,7 +117,7 @@ public class InvoiceController {
     // GET INVOICE BY ID
     // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER', 'VIEWER')")
     @GetMapping("/{invoiceId}")
     public ResponseEntity<InvoiceResponse_Dto>
     getInvoice(
@@ -118,7 +148,7 @@ public class InvoiceController {
     // CANCEL INVOICE
     // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @PutMapping("/{invoiceId}/cancel")
     public ResponseEntity<InvoiceResponse_Dto>
     cancelInvoice(
@@ -148,7 +178,7 @@ public class InvoiceController {
 // OWNER + BILLER
 // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER', 'VIEWER')")
     @GetMapping("/{invoiceId}/pdf")
     public ResponseEntity<byte[]> downloadInvoicePdf(
             Authentication authentication,
@@ -183,7 +213,7 @@ public class InvoiceController {
 // OWNER + BILLER
 // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER', 'BILLER')")
     @PostMapping("/{invoiceId}/send-whatsapp")
     public ResponseEntity<String> sendInvoiceToWhatsApp(
             Authentication authentication,

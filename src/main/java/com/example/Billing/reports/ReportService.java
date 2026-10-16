@@ -301,16 +301,16 @@ public class ReportService {
 
         if (from == null || to == null) {
 
-            throw new RuntimeException(
-                    "From and to dates are required"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "From and to dates are required"
             );
         }
 
 
         if (from.isAfter(to)) {
 
-            throw new RuntimeException(
-                    "From date cannot be after to date"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "From date cannot be after to date"
             );
         }
     }
@@ -326,24 +326,24 @@ public class ReportService {
 
         if (user == null) {
 
-            throw new RuntimeException(
-                    "User not authenticated"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required"
             );
         }
 
 
         if (shopContextResolver.resolveActiveShop(user) == null) {
 
-            throw new RuntimeException(
-                    "User is not assigned to a shop"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"
             );
         }
 
 
         if (shopContextResolver.resolveActiveShop(user).getId() == null) {
 
-            throw new RuntimeException(
-                    "Shop ID is missing"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "SHOP_NOT_FOUND", "Shop not found"
             );
         }
 

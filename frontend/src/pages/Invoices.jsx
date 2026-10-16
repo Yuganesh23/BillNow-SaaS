@@ -34,7 +34,7 @@ export default function Invoices() {
       try {
         await cancelInvoice(id);
         fetchInvoices();
-      } catch (err) {
+      } catch  {
         alert('Failed to cancel invoice');
       }
     }

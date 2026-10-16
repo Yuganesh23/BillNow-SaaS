@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomers, createCustomer } from '../api/customerApi';
 import { getProducts } from '../api/productApi';
@@ -6,6 +6,9 @@ import { createInvoice } from '../api/invoiceApi';
 import { createPayment } from '../api/paymentApi';
 import { calculateInvoiceTotals } from '../utils/invoiceCalc';
 import { useBranch } from '../context/BranchContext';
+import { useAuth } from '../context/AuthContext';
+import { canQueueInvoice, queueInvoice } from '../utils/offlineInvoiceQueue';
+import { useLocale } from '../context/LocaleContext';
 import { Plus, Trash2, ArrowLeft, Save, QrCode } from 'lucide-react';
 import QRScannerModal from '../components/QRScannerModal';
 import { Link } from 'react-router-dom';
@@ -13,6 +16,9 @@ import { Link } from 'react-router-dom';
 export default function CreateInvoice() {
   const navigate = useNavigate();
   const { branches, activeBranchId } = useBranch();
+  const { user } = useAuth();
+  const { t } = useLocale();
+  const formRef = useRef(null);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   
@@ -28,6 +34,7 @@ export default function CreateInvoice() {
   const [newCustomer, setNewCustomer] = useState({ name: '', whatsappNumber: '', email: '', address: '', gstin: '', state: '' });
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState('');
 
   const handleAddCustomer = async () => {
     setIsAddingCustomer(true);
@@ -37,7 +44,7 @@ export default function CreateInvoice() {
       setSelectedCustomerId(added.id);
       setShowCustomerModal(false);
       setNewCustomer({ name: '', whatsappNumber: '', email: '' });
-    } catch(err) {
+    } catch {
       alert('Failed to add customer');
     }
     setIsAddingCustomer(false);
@@ -49,7 +56,7 @@ export default function CreateInvoice() {
         const [custData, prodData] = await Promise.all([getCustomers(), getProducts()]);
         setCustomers(custData);
         setProducts(prodData);
-      } catch (err) {
+      } catch  {
         console.error('Failed to load initial data');
       }
     };
@@ -110,13 +117,29 @@ export default function CreateInvoice() {
                   items.every(item => item.productId && item.quantity > 0) &&
                   items.length > 0;
 
+  useEffect(() => {
+    const shortcuts = (event) => {
+      if (event.key === 'F2') {
+        event.preventDefault();
+        setShowScanner(true);
+      } else if (event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        handleAddItem();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    };
+    window.addEventListener('keydown', shortcuts);
+    return () => window.removeEventListener('keydown', shortcuts);
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isValid) return;
     
     setIsSubmitting(true);
-    try {
-      const payload = {
+    const payload = {
           customerId: parseInt(selectedCustomerId),
           items: totals.items.map(item => ({
             productId: parseInt(item.productId),
@@ -134,7 +157,7 @@ export default function CreateInvoice() {
           igstTotal: totals.igstTotal || 0,
           isInterState: totals.isInterState || false
         };
-      
+    try {
       const response = await createInvoice(payload);
       if (paymentMethod) {
           await createPayment({
@@ -144,8 +167,15 @@ export default function CreateInvoice() {
           });
         }
         navigate(`/invoices/${response.id}`);
-    } catch (err) {
-      alert('Failed to create invoice');
+    } catch (error) {
+      if (canQueueInvoice(error) && 'indexedDB' in window) {
+        const queued = await queueInvoice({ payload, branchId: activeBranchId, userKey: user?.email || String(user?.id || '') });
+        setOfflineNotice(`${queued.temporaryReference} is saved on this device and will sync when the connection returns. It will remain unpaid until you record payment after sync.`);
+        setItems([{ id: Date.now(), productId: '', quantity: 1, product: null }]);
+        setSelectedCustomerId('');
+      } else {
+        alert(error.response?.data?.message || 'Failed to create invoice');
+      }
       setIsSubmitting(false);
     }
   };
@@ -157,17 +187,19 @@ export default function CreateInvoice() {
           <Link to="/invoices" className="mr-4 text-slate-400 hover:text-slate-600">
             <ArrowLeft className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Create Invoice</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('createInvoice')}</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      {offlineNotice && <div role="status" className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{offlineNotice}</div>}
+      <div className="mb-4 text-xs text-slate-500">Shortcuts: F2 scan · Alt+A add item · Ctrl+Enter save</div>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
         {/* Customer Section */}
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Customer Details</h2>
+          <h2 className="text-lg font-medium text-slate-900 mb-4">{t('customerDetails')}</h2>
           <div className="max-w-md flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-700">Select Customer <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700">{t('selectCustomer')} <span className="text-red-500">*</span></label>
               <select
                 required
                 value={selectedCustomerId}
@@ -193,7 +225,7 @@ export default function CreateInvoice() {
 
         {/* Items Section */}
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Invoice Items</h2>
+          <h2 className="text-lg font-medium text-slate-900 mb-4">{t('invoiceItems')}</h2>
           
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 mb-4">
@@ -264,7 +296,7 @@ export default function CreateInvoice() {
               className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Item
+              {t('addItem')}
             </button>
             <button
               type="button"
@@ -272,7 +304,7 @@ export default function CreateInvoice() {
               className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
             >
               <QrCode className="w-4 h-4 mr-2" />
-              Scan Barcode
+              {t('scanBarcode')}
             </button>
           </div>
         </div>
@@ -319,15 +351,15 @@ export default function CreateInvoice() {
           
           <div className="w-full md:w-1/3 space-y-3">
             <div className="flex justify-between text-sm text-slate-600">
-              <span>Subtotal</span>
+              <span>{t('subtotal')}</span>
               <span>₹{totals.subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm text-slate-600">
-              <span>Discount</span>
+              <span>{t('discount')}</span>
               <span className="text-red-500">-₹{totals.discountAmount.toLocaleString()}</span>
             </div>
             <div className="pt-3 border-t border-slate-200 flex justify-between">
-              <span className="text-base font-medium text-slate-900">Grand Total</span>
+              <span className="text-base font-medium text-slate-900">{t('grandTotal')}</span>
               <span className="text-xl font-bold text-indigo-600">₹{totals.totalAmount.toLocaleString()}</span>
             </div>
           </div>
@@ -339,7 +371,7 @@ export default function CreateInvoice() {
             disabled={!isValid || isSubmitting}
             className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Saving...' : 'Save & Create Invoice'}
+            {isSubmitting ? t('saving') : t('saveInvoice')}
             {!isSubmitting && <Save className="ml-2 w-5 h-5" />}
           </button>
         </div>

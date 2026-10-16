@@ -43,6 +43,9 @@ public class Supplier_entity {
     @Column(length = 100)
     private String state;
 
+    @Column(name = "state_code", length = 2)
+    private String stateCode;
+
     @Column(length = 500)
     private String address;
 

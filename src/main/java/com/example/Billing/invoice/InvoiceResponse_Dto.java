@@ -42,6 +42,11 @@ public class InvoiceResponse_Dto {
     private BigDecimal cgstTotal;
     private BigDecimal sgstTotal;
     private BigDecimal igstTotal;
+    private BigDecimal cessTotal;
+    private BigDecimal roundOff;
+    private String placeOfSupplyCode;
+    private String documentType;
+    private String amountInWords;
     private Boolean isInterState;
 
     private List<InvoiceItemResponse_Dto> items;

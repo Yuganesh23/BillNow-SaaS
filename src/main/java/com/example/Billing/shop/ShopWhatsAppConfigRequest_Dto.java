@@ -14,7 +14,6 @@ public class ShopWhatsAppConfigRequest_Dto {
 
     private String businessAccountId;
 
-    @NotBlank(message = "WhatsApp access token is required")
     private String accessToken;
 
     private Boolean enabled;

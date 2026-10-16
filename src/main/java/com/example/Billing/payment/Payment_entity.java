@@ -22,8 +22,8 @@ public class Payment_entity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "invoice_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "invoice_id", nullable = false)
     private Invoice_entity invoice;
 
     @Enumerated(EnumType.STRING)
@@ -32,6 +32,12 @@ public class Payment_entity {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    @Column(length = 100)
+    private String reference;
+
+    @Column(length = 500)
+    private String notes;
 
     @Column(nullable = false)
     private LocalDateTime paidAt;

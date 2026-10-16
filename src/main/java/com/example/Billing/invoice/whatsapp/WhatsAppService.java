@@ -1,6 +1,7 @@
 package com.example.Billing.invoice.whatsapp;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.invoice.InvoiceRepository;
 import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.invoice.pdf.InvoicePdfService;
@@ -12,6 +13,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.util.LinkedMultiValueMap;
@@ -32,6 +34,7 @@ public class WhatsAppService {
     private final ShopWhatsAppConfigRepository configRepository;
 
     private final WhatsAppStatusService whatsappStatusService;
+    private final com.example.Billing.security.SecretStringCipher secretStringCipher;
 
 
     private final RestClient restClient =
@@ -102,11 +105,8 @@ public class WhatsAppService {
                                 invoiceId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .orElseThrow(() -> new AppException(
+                                HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
 
 
         // -------------------------------------------------
@@ -184,7 +184,7 @@ public class WhatsAppService {
                 config.getPhoneNumberId();
 
         String accessToken =
-                config.getAccessToken();
+                secretStringCipher.decrypt(config.getAccessToken());
 
 
         if (phoneNumberId == null ||
@@ -210,7 +210,8 @@ public class WhatsAppService {
         // -------------------------------------------------
 
         whatsappStatusService.markSending(
-                invoiceId
+                invoiceId,
+                shopId
         );
 
 
@@ -277,7 +278,8 @@ public class WhatsAppService {
             // =============================================
 
             whatsappStatusService.markSent(
-                    invoiceId
+                    invoiceId,
+                    shopId
             );
 
         } catch (Exception e) {
@@ -300,6 +302,7 @@ public class WhatsAppService {
 
             whatsappStatusService.markFailed(
                     invoiceId,
+                shopId,
                     message
             );
 

@@ -11,9 +11,13 @@ import com.example.Billing.payment.Payment_entity;
 import java.util.List;
 import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,14 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.awt.Color;
 
 import java.io.ByteArrayOutputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import com.example.Billing.gst.IndianAmountInWords;
+import com.example.Billing.compliance.ComplianceStatus;
+import com.example.Billing.compliance.EInvoiceRecord;
+import com.example.Billing.compliance.EInvoiceRecordRepository;
+import com.example.Billing.compliance.EWayBillRecord;
+import com.example.Billing.compliance.EWayBillRecordRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +44,36 @@ public class InvoicePdfService {
     private final InvoiceRepository invoiceRepository;
     private final ShopContextResolver shopContextResolver;
     private final PaymentRepository paymentRepository;
+    private final ObjectProvider<S3Client> s3ClientProvider;
+    private final com.example.Billing.workflow.UpiPaymentLinkService upiPaymentLinkService;
+    private final com.example.Billing.workflow.UpiQrCodeService upiQrCodeService;
+    private final EInvoiceRecordRepository eInvoiceRecordRepository;
+    private final EWayBillRecordRepository eWayBillRecordRepository;
+
+    @Value("${storage.bucket:uploads}")
+    private String storageBucket;
 
     @Transactional(readOnly = true)
     public byte[] generateInvoicePdf(User_entity user, Long invoiceId) {
 
         Invoice_entity invoice = invoiceRepository
                 .findByIdAndShopId(invoiceId, shopContextResolver.resolveActiveShop(user).getId())
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
+
+        return renderInvoicePdf(invoice);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateInvoicePdfForPortal(Long invoiceId, Long shopId, Long customerId) {
+        Invoice_entity invoice = invoiceRepository.findByIdAndShopId(invoiceId, shopId)
+                .filter(value -> value.getCustomer().getId().equals(customerId))
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
+        return renderInvoicePdf(invoice);
+    }
+
+    private byte[] renderInvoicePdf(Invoice_entity invoice) {
         
         Shop_entity shop = invoice.getShop();
         boolean hasShopGst = shop.getGstin() != null && !shop.getGstin().isEmpty();
@@ -93,14 +128,10 @@ public class InvoicePdfService {
             middleHeader.setHorizontalAlignment(Element.ALIGN_CENTER);
             middleHeader.setVerticalAlignment(Element.ALIGN_MIDDLE);
             
-            if (shop.getLogoBase64() != null && !shop.getLogoBase64().isEmpty()) {
+            byte[] logoBytes = loadLogo(shop);
+            if (logoBytes != null) {
                 try {
-                    String base64Data = shop.getLogoBase64();
-                    if (base64Data.contains(",")) {
-                        base64Data = base64Data.split(",")[1];
-                    }
-                    byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
-                    Image logo = Image.getInstance(imageBytes);
+                    Image logo = Image.getInstance(logoBytes);
                     logo.scaleToFit(80, 60);
                     logo.setAlignment(Element.ALIGN_CENTER);
                     middleHeader.addElement(logo);
@@ -115,7 +146,13 @@ public class InvoicePdfService {
             rightHeader.setBorder(Rectangle.NO_BORDER);
             rightHeader.setHorizontalAlignment(Element.ALIGN_RIGHT);
             
-            Paragraph title = new Paragraph("INVOICE", titleFont);
+            String documentTitle = switch (safe(invoice.getDocumentType())) {
+                case "BILL_OF_SUPPLY" -> "BILL OF SUPPLY";
+                case "CREDIT_NOTE" -> "CREDIT NOTE";
+                case "DEBIT_NOTE" -> "DEBIT NOTE";
+                default -> "TAX INVOICE";
+            };
+            Paragraph title = new Paragraph(documentTitle, titleFont);
             title.setAlignment(Element.ALIGN_RIGHT);
             rightHeader.addElement(title);
             
@@ -130,9 +167,14 @@ public class InvoicePdfService {
             Paragraph statusPara = new Paragraph("Status: " + safe(invoice.getStatus() != null ? invoice.getStatus().name() : ""), boldFont);
             statusPara.setAlignment(Element.ALIGN_RIGHT);
             rightHeader.addElement(statusPara);
+            Paragraph place = new Paragraph("Place of supply: " + safe(invoice.getPlaceOfSupplyCode()), smallFont);
+            place.setAlignment(Element.ALIGN_RIGHT);
+            rightHeader.addElement(place);
 
             headerTable.addCell(rightHeader);
             document.add(headerTable);
+
+            addComplianceDetails(document, invoice, shop, smallFont, boldFont);
             
             document.add(new Paragraph(" "));
             addLineSeparator(document);
@@ -234,13 +276,20 @@ public class InvoicePdfService {
             leftTotalCell.setBorder(Rectangle.NO_BORDER);
             
             String paymentMethodStr = "";
-            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findByInvoiceId(invoiceId);
+            java.util.Optional<Payment_entity> paymentOpt = paymentRepository.findFirstByInvoiceIdOrderByPaidAtDesc(invoice.getId());
             if (paymentOpt.isPresent() && paymentOpt.get().getPaymentMethod() != null) {
                 paymentMethodStr = paymentOpt.get().getPaymentMethod().name();
             }
             if (!paymentMethodStr.isEmpty()) {
                 String formattedMethod = paymentMethodStr.substring(0, 1).toUpperCase() + paymentMethodStr.substring(1).toLowerCase();
                 leftTotalCell.addElement(new Paragraph("Payment Method: " + formattedMethod, smallFont));
+            }
+            if (shop.getUpiId() != null && !shop.getUpiId().isBlank() && invoice.getTotalAmount().signum() > 0) {
+                String link = upiPaymentLinkService.create(shop.getUpiId(), displayName, invoice.getTotalAmount(), invoice.getInvoiceNumber());
+                Image upiQr = Image.getInstance(upiQrCodeService.png(link));
+                upiQr.scaleToFit(95, 95);
+                leftTotalCell.addElement(new Paragraph("Scan to pay by UPI", boldFont));
+                leftTotalCell.addElement(upiQr);
             }
             totalsTable.addCell(leftTotalCell);
 
@@ -262,11 +311,18 @@ public class InvoicePdfService {
                     addCalculationRow(calcTable, "CGST Total", "+ " + formatMoney(invoice.getCgstTotal()), normalFont, false);
                     addCalculationRow(calcTable, "SGST Total", "+ " + formatMoney(invoice.getSgstTotal()), normalFont, true);
                 }
+                if (invoice.getCessTotal() != null && invoice.getCessTotal().compareTo(BigDecimal.ZERO) != 0) {
+                    addCalculationRow(calcTable, "Cess Total", "+ " + formatMoney(invoice.getCessTotal()), normalFont, false);
+                }
             } else {
                 addCalculationRow(calcTable, "Subtotal", formatMoney(invoice.getSubtotal()), normalFont, false);
                 if (invoice.getDiscountAmount() != null && invoice.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
                     addCalculationRow(calcTable, "Discount", "- " + formatMoney(invoice.getDiscountAmount()), normalFont, true);
                 }
+            }
+
+            if (invoice.getRoundOff() != null && invoice.getRoundOff().compareTo(BigDecimal.ZERO) != 0) {
+                addCalculationRow(calcTable, "Round off", formatMoney(invoice.getRoundOff()), normalFont, false);
             }
 
             addCalculationRow(calcTable, "GRAND TOTAL", formatMoney(invoice.getTotalAmount()), totalFont, false);
@@ -276,6 +332,14 @@ public class InvoicePdfService {
             totalsTable.addCell(totalsWrapper);
 
             document.add(totalsTable);
+
+            document.add(new Paragraph("Amount in words: " + IndianAmountInWords.rupees(invoice.getTotalAmount()), boldFont));
+            if (shop.getBankDetails() != null && !shop.getBankDetails().isBlank()) {
+                document.add(new Paragraph("Bank details: " + shop.getBankDetails(), smallFont));
+            }
+            if (shop.getInvoiceTerms() != null && !shop.getInvoiceTerms().isBlank()) {
+                document.add(new Paragraph("Terms: " + shop.getInvoiceTerms(), smallFont));
+            }
 
             // =================================================
             // FOOTER
@@ -295,7 +359,69 @@ public class InvoicePdfService {
             return outputStream.toByteArray();
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate invoice PDF", e);
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate invoice PDF");
+        }
+    }
+
+    private void addComplianceDetails(Document document, Invoice_entity invoice, Shop_entity shop,
+                                      Font smallFont, Font boldFont) throws Exception {
+        EInvoiceRecord eInvoice = eInvoiceRecordRepository.findByInvoiceIdAndShopId(invoice.getId(), shop.getId())
+                .filter(record -> record.getStatus() == ComplianceStatus.GENERATED).orElse(null);
+        EWayBillRecord eWayBill = eWayBillRecordRepository.findByInvoiceIdAndShopId(invoice.getId(), shop.getId())
+                .filter(record -> record.getStatus() == ComplianceStatus.GENERATED).orElse(null);
+        if (eInvoice == null && eWayBill == null) return;
+
+        PdfPTable table = new PdfPTable(eInvoice != null && eInvoice.getSignedQrData() != null ? 2 : 1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(8);
+        PdfPCell details = new PdfPCell();
+        details.setPadding(7);
+        details.setBorderColor(new Color(203, 213, 225));
+        details.addElement(new Paragraph("GST COMPLIANCE", boldFont));
+        if (eInvoice != null) {
+            details.addElement(new Paragraph("IRN: " + safe(eInvoice.getIrn()), smallFont));
+            details.addElement(new Paragraph("Ack No: " + safe(eInvoice.getAcknowledgementNumber()), smallFont));
+            details.addElement(new Paragraph("Ack Date: " + (eInvoice.getAcknowledgementDate() == null ? "" :
+                    eInvoice.getAcknowledgementDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))), smallFont));
+        }
+        if (eWayBill != null) {
+            details.addElement(new Paragraph("E-way Bill: " + safe(eWayBill.getEWayBillNumber()), smallFont));
+            details.addElement(new Paragraph("Valid until: " + (eWayBill.getValidUntil() == null ? "" :
+                    eWayBill.getValidUntil().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))), smallFont));
+        }
+        table.addCell(details);
+        if (eInvoice != null && eInvoice.getSignedQrData() != null) {
+            Image qr = Image.getInstance(upiQrCodeService.png(eInvoice.getSignedQrData()));
+            qr.scaleToFit(90, 90);
+            PdfPCell qrCell = new PdfPCell(qr, true);
+            qrCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            qrCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            qrCell.setBorderColor(new Color(203, 213, 225));
+            table.addCell(qrCell);
+        }
+        document.add(table);
+    }
+
+    private byte[] loadLogo(Shop_entity shop) {
+        if (shop.getLogoObjectKey() != null && !shop.getLogoObjectKey().isBlank()) {
+            S3Client s3Client = s3ClientProvider.getIfAvailable();
+            if (s3Client != null) {
+                try {
+                    return s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                            .bucket(storageBucket).key(shop.getLogoObjectKey()).build()).asByteArray();
+                } catch (Exception exception) {
+                    System.err.println("Failed to load object-storage logo: " + exception.getMessage());
+                }
+            }
+        }
+        if (shop.getLogoBase64() == null || shop.getLogoBase64().isBlank()) return null;
+        try {
+            String base64Data = shop.getLogoBase64();
+            if (base64Data.contains(",")) base64Data = base64Data.substring(base64Data.indexOf(',') + 1);
+            return java.util.Base64.getDecoder().decode(base64Data);
+        } catch (Exception exception) {
+            System.err.println("Failed to decode database logo: " + exception.getMessage());
+            return null;
         }
     }
 

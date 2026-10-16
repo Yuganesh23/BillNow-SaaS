@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSupplierById, createSupplier, updateSupplier } from '../api/supplierApi';
 import { LoadingState } from '../components/common/States';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function SupplierForm() {
@@ -12,8 +12,7 @@ export default function SupplierForm() {
   
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
-  const [error, setError] = useState(null);
+  const [phoneError] = useState("");
   
   const [formData, setFormData] = useState({
     businessName: '',

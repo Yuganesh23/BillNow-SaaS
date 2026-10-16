@@ -3,5 +3,8 @@ package com.example.Billing.subscription;
 public enum SaaSPlan {
 
     MONTHLY,
-    YEARLY
+    YEARLY,
+    BASE,
+    PRO,
+    ENTERPRISE
 }

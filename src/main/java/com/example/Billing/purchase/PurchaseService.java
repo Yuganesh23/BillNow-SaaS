@@ -2,6 +2,7 @@ package com.example.Billing.purchase;
 
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.config.ShopContextResolver;
+import com.example.Billing.common.AppException;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
@@ -11,11 +12,16 @@ import com.example.Billing.supplier.SupplierRepository;
 import com.example.Billing.supplier.Supplier_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import com.example.Billing.gst.GstinValidator;
+import com.example.Billing.gst.RegistrationType;
+import com.example.Billing.gst.TaxCalculationService;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +32,7 @@ public class PurchaseService {
     private final SupplierRepository supplierRepository;
     private final SupplierLedgerRepository ledgerRepository;
     private final ShopContextResolver shopContextResolver;
+    private final TaxCalculationService taxCalculationService;
 
     @Transactional(readOnly = true)
     public List<PurchaseResponse_Dto> getAllPurchases(User_entity user) {
@@ -38,7 +45,7 @@ public class PurchaseService {
     public PurchaseResponse_Dto getPurchaseById(User_entity user, Long id) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Purchase_entity purchase = purchaseRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Purchase not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PURCHASE_NOT_FOUND", "Purchase not found"));
                 
         PurchaseResponse_Dto response = mapToResponse(purchase);
         
@@ -62,12 +69,9 @@ public class PurchaseService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(request.getSupplierId(), shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SUPPLIER_NOT_FOUND", "Supplier not found"));
                 
         String purchaseNumber = String.format("PUR-%04d", purchaseRepository.countByShopId(shop.getId()) + 1);
-        
-        BigDecimal totalBaseAmount = BigDecimal.ZERO;
-        BigDecimal totalTaxAmount = BigDecimal.ZERO;
         
         Purchase_entity purchase = Purchase_entity.builder()
                 .shop(shop)
@@ -81,48 +85,48 @@ public class PurchaseService {
                 
         purchase = purchaseRepository.save(purchase);
         
+        List<Product_entity> products = new ArrayList<>();
+        List<TaxCalculationService.LineInput> taxLines = new ArrayList<>();
         for (PurchaseItemRequest_Dto itemReq : request.getItems()) {
-            Product_entity product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
-            
-            // Stock Update
+            Product_entity product = productRepository.findByIdAndShopId(itemReq.getProductId(), shop.getId())
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
+            products.add(product);
+            taxLines.add(new TaxCalculationService.LineInput(String.valueOf(product.getId()), itemReq.getQuantity(),
+                    itemReq.getPurchasePrice(), product.getTaxType(), product.getGstRate(), product.getCessRate(), BigDecimal.ZERO));
+        }
+
+        String supplierState = supplier.getGstin() != null && GstinValidator.isValid(supplier.getGstin())
+                ? GstinValidator.stateCode(supplier.getGstin()) : supplier.getStateCode();
+        if (supplierState == null) supplierState = shop.getStateCode();
+        TaxCalculationService.Calculation calculation = taxCalculationService.calculate(new TaxCalculationService.Request(
+                supplierState, shop.getStateCode(),
+                supplier.getGstin() == null ? RegistrationType.UNREGISTERED : RegistrationType.REGULAR,
+                purchase.getDiscountAmount(), taxLines));
+
+        for (int index = 0; index < products.size(); index++) {
+            Product_entity product = products.get(index);
+            PurchaseItemRequest_Dto itemReq = request.getItems().get(index);
+            TaxCalculationService.LineResult result = calculation.lines().get(index);
             product.setStockQuantity(product.getStockQuantity() + itemReq.getQuantity().doubleValue());
             productRepository.save(product);
-            
-            BigDecimal enteredLineTotal = itemReq.getPurchasePrice().multiply(itemReq.getQuantity());
-            BigDecimal itemBaseAmount = enteredLineTotal;
-            BigDecimal itemTaxAmount = BigDecimal.ZERO;
-
-            if (product.getGstRate() != null && product.getGstRate().compareTo(BigDecimal.ZERO) > 0) {
-                if (product.getTaxType() == com.example.Billing.product.TaxType.INCLUSIVE) {
-                    // Base Amount = Total Amount / (1 + Tax Rate / 100)
-                    BigDecimal divisor = BigDecimal.ONE.add(product.getGstRate().divide(new BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP));
-                    itemBaseAmount = enteredLineTotal.divide(divisor, 2, java.math.RoundingMode.HALF_UP);
-                    itemTaxAmount = enteredLineTotal.subtract(itemBaseAmount);
-                } else if (product.getTaxType() == com.example.Billing.product.TaxType.EXCLUSIVE) {
-                    // Tax Amount = Total Amount * (Tax Rate / 100)
-                    itemTaxAmount = enteredLineTotal.multiply(product.getGstRate()).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-                    itemBaseAmount = enteredLineTotal;
-                }
-            }
-            
-            totalBaseAmount = totalBaseAmount.add(itemBaseAmount);
-            totalTaxAmount = totalTaxAmount.add(itemTaxAmount);
-            
             PurchaseItem_entity item = PurchaseItem_entity.builder()
                     .purchase(purchase)
                     .product(product)
                     .quantity(itemReq.getQuantity())
                     .purchasePrice(itemReq.getPurchasePrice())
-                    .totalPrice(enteredLineTotal) // store what user typed as line total
+                    .totalPrice(result.total())
                     .build();
             purchase.getItems().add(item);
         }
         
-        purchase.setSubtotal(totalBaseAmount);
-        purchase.setTaxAmount(totalTaxAmount);
-        
-        BigDecimal grandTotal = totalBaseAmount.add(totalTaxAmount).subtract(purchase.getDiscountAmount());
+        purchase.setSubtotal(calculation.taxableAmount());
+        purchase.setTaxAmount(calculation.cgst().add(calculation.sgst()).add(calculation.igst()).add(calculation.cess()));
+        purchase.setTaxableAmount(calculation.taxableAmount());
+        purchase.setCgstTotal(calculation.cgst());
+        purchase.setSgstTotal(calculation.sgst());
+        purchase.setIgstTotal(calculation.igst());
+        purchase.setCessTotal(calculation.cess());
+        BigDecimal grandTotal = calculation.total();
         purchase.setGrandTotal(grandTotal);
         
         purchaseRepository.save(purchase);
@@ -180,10 +184,10 @@ public class PurchaseService {
     public PurchaseResponse_Dto recordPayment(User_entity user, Long id, java.math.BigDecimal amount, String paymentMethod, String notes) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Purchase_entity purchase = purchaseRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Purchase not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "PURCHASE_NOT_FOUND", "Purchase not found"));
                 
         if ("PAID".equals(purchase.getStatus())) {
-            throw new RuntimeException("Purchase is already fully paid");
+            throw new AppException(HttpStatus.CONFLICT, "PURCHASE_ALREADY_PAID", "Purchase is already fully paid");
         }
 
         if (purchase.getAmountPaid() == null) {

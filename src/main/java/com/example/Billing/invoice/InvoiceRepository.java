@@ -10,12 +10,24 @@ import java.math.BigDecimal;
 
 public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> {
 
+    long countByShopId(Long shopId);
+    long countByShopIdAndCreatedAtGreaterThanEqual(Long shopId, java.time.LocalDateTime createdAt);
+
     List<Invoice_entity> findByShopIdOrderByCreatedAtDesc(Long shopId);
+
+    List<Invoice_entity> findByCustomerIdAndShopIdOrderByCreatedAtDesc(Long customerId, Long shopId);
 
     Optional<Invoice_entity> findByIdAndShopId(
             Long invoiceId,
             Long shopId
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from Invoice_entity i where i.id = :invoiceId and i.shop.id = :shopId")
+    Optional<Invoice_entity> findByIdAndShopIdForUpdate(@Param("invoiceId") Long invoiceId,
+                                                        @Param("shopId") Long shopId);
+
+    Optional<Invoice_entity> findByShopIdAndIdempotencyKey(Long shopId, String idempotencyKey);
 
     @Query("SELECT COUNT(i) FROM Invoice_entity i WHERE i.biller.id = :billerId")
     long countByBillerId(@Param("billerId") Long billerId);

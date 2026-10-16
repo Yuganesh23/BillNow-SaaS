@@ -40,19 +40,25 @@ public class ProfileController {
 
         // Update User
         if (request.getUserName() != null) user.setName(request.getUserName());
-        if (request.getUserEmail() != null && !request.getUserEmail().isEmpty()) user.setEmail(request.getUserEmail());
+        if (request.getUserEmail() != null && !request.getUserEmail().isBlank()) {
+            String newEmail = request.getUserEmail().trim().toLowerCase();
+            if (!newEmail.equals(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                throw new RuntimeException("Email already registered");
+            }
+            user.setEmail(newEmail);
+        }
         if (request.getUserMobile() != null) user.setMobileNumber(request.getUserMobile());
         // We might not want to let them change email to avoid breaking JWT flow for now,
         // but if we do, they have to login again.
         
         // Update Shop
         Shop_entity shop = user.getShop();
-        if (shop == null && user.getRole().equals("ROLE_SHOP_OWNER")) {
+        if (shop == null && user.getRole().equals("SHOP_OWNER")) {
             // Find shop by owner
             shop = shopRepository.findByOwnerId(user.getId()).stream().findFirst().orElse(null);
         }
         
-        if (shop != null && user.getRole().equals("ROLE_SHOP_OWNER")) {
+        if (shop != null && user.getRole().equals("SHOP_OWNER")) {
             if (request.getShopName() != null) shop.setName(request.getShopName());
             if (request.getShopMobile() != null) shop.setMobileNumber(request.getShopMobile());
             if (request.getShopAddress() != null) shop.setAddress(request.getShopAddress());

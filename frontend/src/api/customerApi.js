@@ -70,3 +70,12 @@ export const deleteCustomer = async (id) => {
   const response = await axiosClient.delete(`/customers/${id}`);
   return response.data;
 };
+
+export const createCustomerPortalLink = async (id) => {
+  const response = await axiosClient.post(`/customers/${id}/portal-access`);
+  return response.data;
+};
+
+export const revokeCustomerPortalLink = async (id) => {
+  await axiosClient.delete(`/customers/${id}/portal-access`);
+};

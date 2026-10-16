@@ -3,6 +3,7 @@ package com.example.Billing.subscription;
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.config.RazorpayConfig.RazorpayProperties;
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.shop.SubscriptionTier;
 import com.example.Billing.subscription.dto.CreateSubscriptionRequest_Dto;
 import com.example.Billing.subscription.dto.SubscriptionResponse_Dto;
 import com.example.Billing.subscription.dto.VerifySubscriptionRequest_Dto;
@@ -36,6 +37,7 @@ public class SaaSSubscriptionService {
     private final RazorpayProperties razorpayProperties;
 
     private final SaaSSubscriptionRepository subscriptionRepository;
+    private final SubscriptionWebhookEventRepository webhookEvents;
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
@@ -48,6 +50,15 @@ public class SaaSSubscriptionService {
 
     @Value("${razorpay.yearly-plan-id}")
     private String yearlyPlanId;
+
+    @Value("${razorpay.base-yearly-plan-id:${razorpay.yearly-plan-id}}")
+    private String baseYearlyPlanId;
+
+    @Value("${razorpay.pro-yearly-plan-id:${razorpay.yearly-plan-id}}")
+    private String proYearlyPlanId;
+
+    @Value("${razorpay.enterprise-yearly-plan-id:${razorpay.yearly-plan-id}}")
+    private String enterpriseYearlyPlanId;
 
 
     // =========================================================
@@ -107,10 +118,7 @@ public class SaaSSubscriptionService {
         String planId =
                 getPlanId(request.getPlan());
 
-        int totalCount =
-                request.getPlan() == SaaSPlan.MONTHLY
-                        ? 120
-                        : 10;
+        int totalCount = request.getPlan() == SaaSPlan.MONTHLY ? 120 : 10;
 
         try {
 
@@ -335,6 +343,7 @@ public class SaaSSubscriptionService {
             // -------------------------------------------------
 
             shop.setActive(true);
+            applyPlanToShop(shop, subscription);
 
             return mapToResponse(subscription);
 
@@ -540,6 +549,9 @@ public class SaaSSubscriptionService {
             SaaSSubscription_entity subscription =
                     optional.get();
 
+            String eventId = WebhookEventIdentity.resolve(event, payload);
+            if (webhookEvents.existsByEventId(eventId)) return;
+
             // -------------------------------------------------
             // Process events
             // -------------------------------------------------
@@ -657,6 +669,15 @@ public class SaaSSubscriptionService {
             shop.setActive(
                     subscription.isActive()
             );
+            applyPlanToShop(shop, subscription);
+
+            webhookEvents.save(SubscriptionWebhookEvent.builder()
+                    .shop(shop)
+                    .subscription(subscription)
+                    .eventId(eventId)
+                    .eventType(eventName)
+                    .payloadHash(WebhookEventIdentity.hash(payload))
+                    .build());
 
         } catch (RazorpayException e) {
 
@@ -778,7 +799,30 @@ public class SaaSSubscriptionService {
 
             case YEARLY ->
                     yearlyPlanId;
+
+            case BASE ->
+                    baseYearlyPlanId;
+
+            case PRO ->
+                    proYearlyPlanId;
+
+            case ENTERPRISE ->
+                    enterpriseYearlyPlanId;
         };
+    }
+
+    private void applyPlanToShop(Shop_entity shop, SaaSSubscription_entity subscription) {
+        if (!subscription.isActive()) return;
+        SubscriptionTier tier = switch (subscription.getPlan()) {
+            case BASE -> SubscriptionTier.BASE;
+            case PRO -> SubscriptionTier.PRO;
+            case ENTERPRISE -> SubscriptionTier.ENTERPRISE;
+            default -> null;
+        };
+        if (tier != null) shop.setSubscriptionTier(tier);
+        shop.setSubscriptionEndsAt(subscription.getEndDate() != null
+                ? subscription.getEndDate()
+                : LocalDateTime.now().plusYears(1));
     }
 
 

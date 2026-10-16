@@ -1,10 +1,12 @@
 package com.example.Billing.supplier;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.config.ShopContextResolver;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -31,7 +33,7 @@ public class SupplierService {
     public SupplierResponse_Dto getSupplierById(User_entity user, Long id) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> supplierNotFound());
         return mapToResponse(supplier);
     }
 
@@ -58,7 +60,7 @@ public class SupplierService {
     public SupplierResponse_Dto updateSupplier(User_entity user, Long id, SupplierRequest_Dto request) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> supplierNotFound());
                 
         if (request.getBusinessName() != null) supplier.setBusinessName(request.getBusinessName());
         if (request.getContactPerson() != null) supplier.setContactPerson(request.getContactPerson());
@@ -76,7 +78,7 @@ public class SupplierService {
     public List<SupplierLedgerResponse_Dto> getLedger(User_entity user, Long id) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> supplierNotFound());
                 
         return ledgerRepository.findBySupplierIdOrderByTransactionDateDesc(supplier.getId())
                 .stream().map(l -> SupplierLedgerResponse_Dto.builder()
@@ -119,7 +121,7 @@ public class SupplierService {
     public void recordPayment(User_entity user, Long supplierId, BigDecimal amount, String paymentMethod, String notes) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(supplierId, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> supplierNotFound());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Amount must be greater than zero");
@@ -196,7 +198,7 @@ public class SupplierService {
     public void deleteSupplier(User_entity user, Long id) {
         Shop_entity shop = shopContextResolver.resolveActiveShop(user);
         Supplier_entity supplier = supplierRepository.findByIdAndShopId(id, shop.getId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> supplierNotFound());
 
         if (supplier.getTotalPurchases().compareTo(BigDecimal.ZERO) > 0) {
             throw new RuntimeException("Cannot delete supplier with existing transaction history.");
@@ -222,5 +224,9 @@ public class SupplierService {
                 .outstandingBalance(supplier.getOutstandingBalance())
                 .createdAt(supplier.getCreatedAt())
                 .build();
+    }
+
+    private AppException supplierNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "SUPPLIER_NOT_FOUND", "Supplier not found");
     }
 }

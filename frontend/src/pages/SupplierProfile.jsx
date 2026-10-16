@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getSupplierById, getSupplierLedger, recordSupplierPayment, deleteSupplier, updateSupplier } from '../api/supplierApi';
 import { getPurchases } from '../api/purchaseApi';
 import { LoadingState } from '../components/common/States';
-import { ArrowLeft, Phone, Mail, MapPin, FileText, CreditCard, Trash2, IndianRupee, Edit2 } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, FileText, Trash2, IndianRupee, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -46,7 +46,7 @@ export default function SupplierProfile() {
       await recordSupplierPayment(id, payAmount, payMethod, payNotes);
       setShowPayModal(false);
       fetchData();
-    } catch (err) {
+    } catch  {
       alert("Failed to record payment");
     }
   };
@@ -65,7 +65,7 @@ export default function SupplierProfile() {
   const { id } = useParams();
   const [supplier, setSupplier] = useState(null);
   const [ledger, setLedger] = useState([]);
-  const [purchases, setPurchases] = useState([]);
+  const [,setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
