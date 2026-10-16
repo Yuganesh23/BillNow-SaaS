@@ -27,4 +27,16 @@ class SecurityHeadersFilterTest {
         assertThat(response.getHeader("Permissions-Policy"))
                 .doesNotContain("camera=*").contains("camera=()");
     }
+
+    @Test
+    void permitsOnlySelfHostedAssetsForTheAuthenticatedApiReference() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/swagger-ui/index.html");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .isEqualTo(SecurityHeadersFilter.DOCS_CSP)
+                .contains("script-src 'self'")
+                .doesNotContain("script-src 'self' 'unsafe-inline'");
+    }
 }

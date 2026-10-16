@@ -15,11 +15,15 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class SecurityHeadersFilter extends OncePerRequestFilter {
     static final String API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+    static final String DOCS_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            + "img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        response.setHeader("Content-Security-Policy", API_CSP);
+        String path = request.getRequestURI();
+        response.setHeader("Content-Security-Policy",
+                path.startsWith("/swagger-ui") ? DOCS_CSP : API_CSP);
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "no-referrer");
