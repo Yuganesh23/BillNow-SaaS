@@ -15,7 +15,9 @@ test('Vercel serves the app with required security headers', async () => {
 test('SPA fallback never intercepts API proxy routes', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
   const fallback = config.rewrites.find(({ destination }) => destination === '/index.html');
+  const apiProxy = config.rewrites.find(({ source }) => source === '/api/:path*');
 
   assert.ok(fallback, 'missing SPA fallback');
   assert.match(fallback.source, /\(\?!api\//, 'SPA fallback must exclude /api/*');
+  assert.equal(apiProxy?.destination, '/api/proxy?path=:path*');
 });
