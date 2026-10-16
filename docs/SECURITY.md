@@ -33,4 +33,12 @@
 - OTP HMAC key rotation invalidates outstanding password-reset codes. Rotate it during a maintenance window.
 - Login and password-reset limits reduce automated abuse but do not replace Railway/Vercel edge protection, bot detection, or account monitoring.
 - The application still needs a full endpoint-by-endpoint authorization matrix and systematic cross-tenant suite; that is Phase 1 scope.
-- Dependency scanning, security headers, backup/restore validation, and a complete incident runbook remain Phase 7 work.
+- Dependency scanning, backup/restore validation, and a complete incident runbook remain Phase 7 work.
+
+## Browser security headers
+
+The API adds these headers to every response: a deny-by-default API Content Security Policy, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a restrictive Permissions Policy. HSTS is emitted for secure requests; `server.forward-headers-strategy=framework` lets Railway's forwarded HTTPS scheme drive that decision.
+
+Vercel applies a frontend CSP and the corresponding HSTS, frame, MIME, referrer, and permissions headers to all routes. The CSP permits XenBill's own bundles, HTTPS images and API/error-report connections, the configured service worker, and Razorpay Checkout's script/frame origins. Any new third-party script, font, frame, or worker must receive a CSP review before it is added.
+
+The header sets are covered by `SecurityHeadersFilterTest` and `frontend/src/securityHeaders.test.js`. Production headers must still be confirmed with `curl -I` against the final Vercel and Railway domains because a hosting layer can modify or replace application headers.
