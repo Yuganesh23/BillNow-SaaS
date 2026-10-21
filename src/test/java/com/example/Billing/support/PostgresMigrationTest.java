@@ -43,6 +43,13 @@ class PostgresMigrationTest {
 
     @Test
     void additiveMigrationsApplyToTheBaselineSchema() {
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        // Hibernate creates the current model for this compatibility fixture. Remove
+        // objects owned by later migrations so the replay starts from the pre-V7 shape
+        // instead of attempting to create V7/V8 relations twice.
+        jdbc.execute("drop table if exists customer_portal_access");
+        jdbc.execute("drop table if exists subscription_webhook_events");
+
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .baselineOnMigrate(true)
@@ -53,8 +60,11 @@ class PostgresMigrationTest {
         Integer applied = new JdbcTemplate(dataSource).queryForObject(
                 "select count(*) from flyway_schema_history where success", Integer.class);
         assertThat(applied).isGreaterThanOrEqualTo(2);
+        assertThat(jdbc.queryForObject("select to_regclass('subscription_webhook_events') is not null", Boolean.class))
+                .isTrue();
+        assertThat(jdbc.queryForObject("select to_regclass('customer_portal_access') is not null", Boolean.class))
+                .isTrue();
 
-        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         Long userId = jdbc.queryForObject("insert into users(name,email,password,role,active) values ('Perf Owner','perf@example.test','x','SHOP_OWNER',true) returning id", Long.class);
         Long shopId = jdbc.queryForObject("""
                 insert into shops(name,email,state_code,registration_type,hsn_code_length,invoice_prefix,
