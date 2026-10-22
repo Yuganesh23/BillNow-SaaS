@@ -1,0 +1,45 @@
+# GST assumptions for CA review
+
+This document records calculation decisions; it is not tax advice. A practising CA must approve these rules before production filing.
+
+## Reporting additions
+
+- GSTR-style reports are reconciliation aids and are not described as filing-ready.
+- B2C-large classification uses the configurable `REPORTS_GST_B2CL_THRESHOLD`; its current legal value and applicability require CA review.
+- Existing document notes store a gross amount rather than itemised tax lines, so report reductions are apportioned using the original invoice's taxable and tax ratios.
+- Historical purchases stored only aggregate tax. V4 splits it as CGST/SGST for same-state suppliers or IGST for other-state suppliers; historical cess cannot be reconstructed and remains zero.
+
+- GSTIN validation checks the official 15-character structure, state/UT prefix, embedded PAN shape and base-36 check digit. State code `97` is retained as “Other Territory”.
+- Place of supply currently uses the buyer state code (derived from a valid GSTIN, otherwise selected manually). A missing unregistered-customer state falls back to the seller state.
+- Equal seller and place-of-supply codes produce CGST and SGST in equal halves. Different codes produce IGST.
+- Composition and unregistered sellers produce a Bill of Supply with zero output tax. Eligibility and composition turnover thresholds are deliberately not encoded.
+- Tax is calculated and rounded per line to two decimals using `HALF_UP`. Line discount is removed first. The invoice discount is then allocated proportionally across taxable line values; the final line receives the residual so the allocation is exact.
+- Inclusive price extraction divides the discounted gross line value by `100 + GST rate + percentage cess rate`. Exclusive pricing applies GST and percentage cess to the discounted taxable value.
+- The final payable amount is rounded to the nearest rupee using `HALF_UP`; the difference is stored and printed as a separate round-off line.
+- HSN/SAC length is configurable per shop as 4, 6 or 8 digits. BillNow does not infer a required length from turnover.
+- Invoice numbers use a per-shop, per-financial-year (April–March) transactional counter and are limited to letters, digits, `/` and `-`, up to 16 characters.
+- Export, SEZ, deemed-export, reverse-charge tax liability, fixed-amount cess and special place-of-supply rules are not automated yet. Their flags must remain informational until a CA-approved rule set is implemented.
+- Historical invoices retain their original displayed number. Migration V2 only backfills their financial year; new documents use the FY series.
+- Legacy shops with no valid GSTIN/state code are backfilled as state code `97` (Other Territory) to keep the additive migration deployable. Owners must select their actual state before issuing new tax documents.
+
+References to verify before launch: GST portal state/UT code list, GST invoice rules, and the business’s CA-approved treatment for composition, unregistered purchases, cess, exports and SEZ supplies.
+
+## Electronic compliance
+
+- E-invoice and e-way-bill features are disabled per shop by default.
+- BillNow validates the fields needed to form a provider-neutral request, but a selected GSP/IRP adapter must perform final schema validation before a production submission.
+- A generated IRN locks ordinary invoice cancellation. It must be cancelled through the compliance workflow inside the configured window.
+- The e-way-bill cancellation window is currently 24 hours from generation. A CA and the selected provider must verify this rule before production enablement.
+- BillNow does not decide whether a particular invoice is legally required to have an IRN or e-way bill. Operators remain responsible for applicability and thresholds.
+
+## BillNow subscription invoices
+
+These rules apply to the tax invoices BillNow issues to shops for its own subscription (see `docs/SUBSCRIPTION_BILLING.md`).
+
+- The amount Razorpay collected is treated as GST-inclusive. Taxable value = amount × 100 / (100 + rate), rounded to two decimals `HALF_UP`; tax is the remainder.
+- The rate (`BILLING_SAAS_GST_RATE`, default 18%) and the SAC (`BILLING_SAAS_SAC_CODE`, no default) are configuration and must be confirmed by a CA.
+- Place of supply: the state in the shop's GSTIN when it is valid; otherwise the shop's selected state; if that is missing or the legacy `97` placeholder, the supplier's state. A CA should confirm this treatment for unregistered recipients.
+- Same supplier and place-of-supply state produces CGST and SGST; the odd paisa goes to SGST so the invoice adds up exactly. Different states produce IGST.
+- Numbers use one platform-wide series per financial year (April–March), `PREFIX/FY/NNNNN`, up to 16 characters. If seller details are configured after payments were received, those invoices are numbered when first downloaded, so numbers may not follow payment dates for that period.
+- Supplier and recipient details are copied onto the invoice when it is issued; later profile edits do not change issued invoices.
+- Refunds, credit notes for subscriptions and export (non-INR) customers are not automated.

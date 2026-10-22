@@ -5,8 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
+import jakarta.servlet.http.HttpServletRequest;
+
+import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -14,6 +17,12 @@ import org.springframework.http.HttpHeaders;
 public class AuthController {
 
     private final AuthService authService;
+    private final RefreshTokenService refreshTokenService;
+    private final JwtService jwtService;
+    private final AuthRateLimiter authRateLimiter;
+    private final AuthCookies authCookies;
+
+
 
 
     // =====================================================
@@ -24,28 +33,18 @@ public class AuthController {
     public ResponseEntity<AuthResponse_Dto> register(
             @Valid
             @RequestBody
-            RegisterRequest_Dto request
+            RegisterRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+
+        authRateLimiter.checkRegister(httpRequest);
 
         AuthResponse_Dto response =
                 authService.register(
                         request
                 );
 
-        ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
-                .httpOnly(true)
-                .secure(false) // Set true in production (HTTPS)
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60) // 7 days
-                .sameSite("Lax")
-                .build();
-                
-        // Return without token in body to be safe, or leave it for now.
-        // We'll let frontend ignore it and just use the cookie.
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(response);
+        return authenticatedResponse(response, HttpStatus.CREATED);
     }
 
 
@@ -57,24 +56,33 @@ public class AuthController {
     public ResponseEntity<AuthResponse_Dto> login(
             @Valid
             @RequestBody
-            LoginRequest_Dto request
+            LoginRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+
+        authRateLimiter.checkLogin(httpRequest, request.getEmail());
 
         AuthResponse_Dto response =
                 authService.login(
                         request
                 );
 
-        ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
-                .httpOnly(true)
-                .secure(false) // Set true in prod
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60)
-                .sameSite("Lax")
-                .build();
+        return authenticatedResponse(response, HttpStatus.OK);
+    }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse_Dto> refresh(HttpServletRequest request) {
+        String refreshToken = authCookies.refreshToken(request);
+        if (refreshToken == null) {
+            throw new com.example.Billing.common.AppException(
+                    HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Session has expired. Please sign in again.");
+        }
+        RefreshTokenService.Rotation rotation = refreshTokenService.rotate(refreshToken);
+        AuthResponse_Dto response = authService.responseFor(rotation.user());
+        String accessToken = response.getToken();
+        response.setToken(null);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .headers(cookieHeaders(accessToken, rotation.refreshToken()))
                 .body(response);
     }
 
@@ -83,18 +91,9 @@ public class AuthController {
     // LOGOUT
     // =====================================================
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        ResponseCookie cookie = ResponseCookie.from("jwt", "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(0) // Expire immediately
-                .sameSite("Lax")
-                .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body("Logged out successfully");
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        refreshTokenService.revoke(authCookies.refreshToken(request));
+        return ResponseEntity.ok().headers(authCookies.clear()).body(Map.of("message", "Logged out successfully"));
     }
 
     // =====================================================
@@ -102,9 +101,11 @@ public class AuthController {
     // =====================================================
     @PostMapping("/forgot-password")
     public ResponseEntity<java.util.Map<String, String>> forgotPassword(
-            @RequestBody java.util.Map<String, String> request
+            @RequestBody java.util.Map<String, String> request,
+            HttpServletRequest httpRequest
     ) {
         String email = request.get("email");
+        authRateLimiter.checkForgotPassword(httpRequest, email);
         authService.forgotPassword(email);
         java.util.Map<String, String> response = new java.util.HashMap<>();
         response.put("message", "OTP sent to email");
@@ -115,11 +116,29 @@ public class AuthController {
     public ResponseEntity<java.util.Map<String, String>> resetPassword(
             @Valid
             @RequestBody
-            ResetPasswordRequest_Dto request
+            ResetPasswordRequest_Dto request,
+            HttpServletRequest httpRequest
     ) {
+        authRateLimiter.checkResetPassword(httpRequest, request.getEmail());
         authService.resetPassword(request);
         java.util.Map<String, String> response = new java.util.HashMap<>();
         response.put("message", "Password reset successfully");
         return ResponseEntity.ok(response);
     }
+
+    private ResponseEntity<AuthResponse_Dto> authenticatedResponse(AuthResponse_Dto response, HttpStatus status) {
+        String accessToken = response.getToken();
+        String refreshToken = refreshTokenService.issue(response.getUserId());
+        response.setToken(null);
+        return ResponseEntity.status(status)
+                .headers(cookieHeaders(accessToken, refreshToken))
+                .body(response);
+    }
+
+    private HttpHeaders cookieHeaders(String accessToken, String refreshToken) {
+        return authCookies.issue(
+                accessToken, Duration.ofMinutes(jwtService.getAccessTokenMinutes()),
+                refreshToken, Duration.ofDays(refreshTokenService.getRefreshTokenDays()));
+    }
+
 }

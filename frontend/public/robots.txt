@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /invoices
+Disallow: /customers
+Disallow: /products
+Sitemap: https://www.xenbill.app/sitemap.xml

@@ -26,3 +26,9 @@ export const getDashboardData = async () => {
   const response = await axiosClient.get('/dashboard');
   return response.data;
 };
+
+export const getOnboardingStatus = async () => {
+  if (isMock) return { complete: false, completedSteps: 0, totalSteps: 6, percentComplete: 0, steps: [] };
+  const response = await axiosClient.get('/onboarding');
+  return response.data;
+};

@@ -56,5 +56,13 @@ public class InvoiceItem {
     private BigDecimal igst = BigDecimal.ZERO;
 
     @Column(nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cess = BigDecimal.ZERO;
+
+    @Column(name = "line_discount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal lineDiscount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;
 }

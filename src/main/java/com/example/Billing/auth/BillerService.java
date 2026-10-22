@@ -1,9 +1,11 @@
 package com.example.Billing.auth;
 
 import com.example.Billing.shop.Shop_entity;
+import com.example.Billing.common.AppException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import com.example.Billing.invoice.InvoiceRepository;
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ public class BillerService {
     private final ShopContextResolver shopContextResolver;
     private final PasswordEncoder passwordEncoder;
     private final InvoiceRepository invoiceRepository;
+    private final com.example.Billing.subscription.PlanLimitsService planLimitsService;
 
 
     // =========================================================
@@ -46,6 +49,7 @@ public class BillerService {
                     "Owner is not associated with a shop"
             );
         }
+        planLimitsService.assertCanCreateUser(shop);
 
         // 3. Check email
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -67,7 +71,7 @@ public class BillerService {
                 .name(request.getName().trim())
                 .email(request.getEmail().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("BILLER")
+                .role(assignableRole(request.getRole()))
                 .active(true)
                 .shop(shop)
                 .build();
@@ -103,16 +107,8 @@ public class BillerService {
         }
 
         // 3. Find biller
-        User_entity biller = userRepository.findById(billerId)
-                .orElseThrow(() -> new RuntimeException("Biller not found"));
-
-        if (biller.getShop() == null || !biller.getShop().getId().equals(shop.getId())) {
-            throw new RuntimeException("Biller does not belong to your shop");
-        }
-
-        if (!"BILLER".equals(biller.getRole())) {
-            throw new RuntimeException("User is not a biller");
-        }
+        User_entity biller = userRepository.findByIdAndShopId(billerId, shop.getId())
+                .orElseThrow(() -> billerNotFound());
 
         // 4. Check email uniqueness if changed
         String newEmail = request.getEmail().trim().toLowerCase();
@@ -123,6 +119,7 @@ public class BillerService {
         // 5. Update
         biller.setName(request.getName().trim());
         biller.setEmail(newEmail);
+        if (request.getRole() != null) biller.setRole(assignableRole(request.getRole()));
         
         // Only update password if provided and not empty
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
@@ -170,7 +167,7 @@ public class BillerService {
         responses.add(mapToResponse(shop.getOwner(), shop));
         
         // Add all regular billers
-        userRepository.findByShopIdAndRole(shop.getId(), "BILLER").stream()
+        userRepository.findByShopIdAndRoleIn(shop.getId(), java.util.List.of("MANAGER", "BILLER", "VIEWER")).stream()
                 .map(biller -> mapToResponse(biller, shop))
                 .forEach(responses::add);
                 
@@ -206,32 +203,10 @@ public class BillerService {
 
         // 3. Find biller
         User_entity biller = userRepository
-                .findById(billerId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Biller not found"
-                        )
-                );
+                .findByIdAndShopId(billerId, shop.getId())
+                .orElseThrow(() -> billerNotFound());
 
-        // 4. Make sure biller belongs to owner's shop
-        if (biller.getShop() == null ||
-                !biller.getShop()
-                        .getId()
-                        .equals(shop.getId())) {
-
-            throw new RuntimeException(
-                    "Biller does not belong to your shop"
-            );
-        }
-
-        // 5. Verify role
-        if (!"BILLER".equals(biller.getRole())) {
-            throw new RuntimeException(
-                    "User is not a biller"
-            );
-        }
-
-        // 6. Deactivate
+        // 4. Deactivate
         biller.setActive(false);
 
         User_entity savedBiller =
@@ -270,32 +245,10 @@ public class BillerService {
 
         // 3. Find biller
         User_entity biller = userRepository
-                .findById(billerId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Biller not found"
-                        )
-                );
+                .findByIdAndShopId(billerId, shop.getId())
+                .orElseThrow(() -> billerNotFound());
 
-        // 4. Check shop ownership
-        if (biller.getShop() == null ||
-                !biller.getShop()
-                        .getId()
-                        .equals(shop.getId())) {
-
-            throw new RuntimeException(
-                    "Biller does not belong to your shop"
-            );
-        }
-
-        // 5. Verify role
-        if (!"BILLER".equals(biller.getRole())) {
-            throw new RuntimeException(
-                    "User is not a biller"
-            );
-        }
-
-        // 6. Activate
+        // 4. Activate
         biller.setActive(true);
 
         User_entity savedBiller =
@@ -335,5 +288,15 @@ public class BillerService {
                 .totalInvoices(totalInvoices)
                 .totalSales(totalSales)
                 .build();
+    }
+
+    private AppException billerNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "BILLER_NOT_FOUND", "Biller not found");
+    }
+
+    private String assignableRole(Role role) {
+        Role value = role == null ? Role.BILLER : role;
+        if (value == Role.SHOP_OWNER) throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "Owner role cannot be assigned");
+        return value.name();
     }
 }

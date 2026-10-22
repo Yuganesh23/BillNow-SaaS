@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
-import { Building2, Plus, Mail, Phone, User, Edit2, Trash2 } from 'lucide-react';
+import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MessageCircle, ShieldCheck, Download, FileJson } from 'lucide-react';
+import { filenameFromDisposition, saveBlob } from '../utils/fileDownload';
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { fetchBranches } = useBranch();
   
   const [userProfile, setUserProfile] = useState({ name: '', email: '', mobileNumber: '' });
@@ -14,9 +15,15 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
   const [showAddShop, setShowAddShop] = useState(false);
-  const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
+  const [newShop, setNewShop] = useState({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', gstin: '', legalName: '', state: '' });
   const [editingShop, setEditingShop] = useState(null);
-  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', logoBase64: '', gstin: '', legalName: '', state: '' });
+  const [editShopData, setEditShopData] = useState({ id: null, name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', logoBase64: '', logoObjectKey: '', logoPreviewUrl: '', gstin: '', legalName: '', state: '' });
+  const [whatsAppConfig, setWhatsAppConfig] = useState({ phoneNumberId: '', businessAccountId: '', accessToken: '', enabled: true, configured: false });
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [compliance, setCompliance] = useState({ eInvoiceEnabled: false, eWayBillEnabled: false, cancellationWindowHours: 24 });
+  const [savingCompliance, setSavingCompliance] = useState(false);
+  const [downloadingExport, setDownloadingExport] = useState('');
+  const [exportStatus, setExportStatus] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -34,7 +41,28 @@ export default function Settings() {
       
       if (user?.role === 'SHOP_OWNER') {
         const shopsRes = await axiosClient.get('/shops');
-        setShops(shopsRes.data);
+        const shopsWithLogos = await Promise.all(shopsRes.data.map(async (shop) => {
+          if (!shop.logoObjectKey) return { ...shop, logoUrl: shop.logoBase64 || '' };
+          try {
+            const { data } = await axiosClient.get('/storage/object-url', { params: { key: shop.logoObjectKey } });
+            return { ...shop, logoUrl: data.url };
+          } catch {
+            return { ...shop, logoUrl: shop.logoBase64 || '' };
+          }
+        }));
+        setShops(shopsWithLogos);
+        try {
+          const { data } = await axiosClient.get('/shop/whatsapp');
+          setWhatsAppConfig({ phoneNumberId: data.phoneNumberId || '', businessAccountId: data.businessAccountId || '', accessToken: '', enabled: data.enabled, configured: true });
+        } catch (error) {
+          if (error.response?.status !== 404) console.error('Unable to load WhatsApp configuration', error);
+        }
+        try {
+          const { data } = await axiosClient.get('/compliance/settings');
+          setCompliance(data);
+        } catch (error) {
+          console.error('Unable to load compliance configuration', error);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -46,19 +74,13 @@ export default function Settings() {
   const handleSaveUser = async () => {
     setSavingUser(true);
     try {
-      const emailChanged = userProfile.email !== user?.email;
       await axiosClient.put('/profile', { 
         userName: userProfile.name,
         userEmail: userProfile.email,
         userMobile: userProfile.mobileNumber
       });
       alert('Profile updated successfully!');
-      
-      if (emailChanged) {
-        alert('You changed your email address. Please log in again.');
-        logout();
-      }
-    } catch (e) {
+    } catch  {
       alert('Failed to update profile.');
     } finally {
       setSavingUser(false);
@@ -73,7 +95,11 @@ export default function Settings() {
       email: shop.email || '',
       mobileNumber: shop.mobileNumber || '',
       address: shop.address || '',
+      locality: shop.locality || '',
+      pincode: shop.pincode || '',
       logoBase64: shop.logoBase64 || '',
+      logoObjectKey: shop.logoObjectKey || '',
+      logoPreviewUrl: shop.logoUrl || shop.logoBase64 || '',
       gstin: shop.gstin || '',
       legalName: shop.legalName || '',
       state: shop.state || ''
@@ -84,23 +110,78 @@ export default function Settings() {
   const handleUpdateShop = async (e) => {
     e.preventDefault();
     try {
-      await axiosClient.put(`/shops/${editShopData.id}`, editShopData);
+      const { id } = editShopData;
+      const payload = {
+        name: editShopData.name, invoiceName: editShopData.invoiceName, email: editShopData.email,
+        mobileNumber: editShopData.mobileNumber, address: editShopData.address, locality: editShopData.locality,
+        pincode: editShopData.pincode, gstin: editShopData.gstin,
+        legalName: editShopData.legalName, state: editShopData.state,
+        logoBase64: editShopData.logoBase64, logoObjectKey: editShopData.logoObjectKey,
+      };
+      await axiosClient.put(`/shops/${id}`, payload);
       alert('Branch updated successfully!');
       setEditingShop(null);
-      fetchData();
-      fetchBranches();
+      await Promise.all([fetchData(), fetchBranches()]);
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to update branch.');
     }
   };
 
-  const handleLogoUpload = (e) => {
+  const handleSaveCompliance = async (event) => {
+    event.preventDefault(); setSavingCompliance(true);
+    try {
+      const { data } = await axiosClient.put('/compliance/settings', compliance);
+      setCompliance(data); alert('Compliance settings saved.');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to save compliance settings.');
+    } finally { setSavingCompliance(false); }
+  };
+
+  const handleSaveWhatsApp = async (e) => {
+    e.preventDefault();
+    if (!whatsAppConfig.accessToken && !whatsAppConfig.configured) {
+      alert('Enter a Meta WhatsApp access token.');
+      return;
+    }
+    setSavingWhatsApp(true);
+    try {
+      await axiosClient.post('/shop/whatsapp', {
+        phoneNumberId: whatsAppConfig.phoneNumberId,
+        businessAccountId: whatsAppConfig.businessAccountId,
+        accessToken: whatsAppConfig.accessToken,
+        enabled: whatsAppConfig.enabled,
+      });
+      setWhatsAppConfig((current) => ({ ...current, accessToken: '', configured: true }));
+      alert('WhatsApp integration saved.');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to save WhatsApp integration.');
+    } finally {
+      setSavingWhatsApp(false);
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo must be smaller than 2 MB.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const { data } = await axiosClient.post('/storage/logo-upload', { contentType: file.type });
+      const upload = await fetch(data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!upload.ok) throw new Error('Storage upload failed');
+      setEditShopData(prev => ({ ...prev, logoObjectKey: data.objectKey, logoBase64: '', logoPreviewUrl: URL.createObjectURL(file) }));
+    } catch (error) {
+      if (error.response?.status !== 404) {
+        alert(error.response?.data?.message || 'Logo upload failed.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditShopData(prev => ({ ...prev, logoBase64: reader.result }));
+        setEditShopData(prev => ({ ...prev, logoBase64: reader.result, logoObjectKey: '', logoPreviewUrl: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -126,12 +207,27 @@ export default function Settings() {
       await axiosClient.post('/shops', newShop);
       alert('New branch added successfully!');
       setShowAddShop(false);
-      setNewShop({ name: '', email: '', mobileNumber: '', address: '', gstin: '', legalName: '', state: '' });
+      setNewShop({ name: '', invoiceName: '', email: '', mobileNumber: '', address: '', locality: '', pincode: '', gstin: '', legalName: '', state: '' });
       fetchData();
       fetchBranches(); // refresh global dropdown
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to add branch. Please check console.');
+    }
+  };
+
+  const downloadShopExport = async (format) => {
+    setDownloadingExport(format);
+    setExportStatus('');
+    try {
+      const response = await axiosClient.get(`/data-export/shop.${format}`, { responseType: 'blob' });
+      const fallback = `billnow-shop-export.${format}`;
+      saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], fallback));
+      setExportStatus(`${format.toUpperCase()} export downloaded for the active branch.`);
+    } catch (error) {
+      setExportStatus(error.response?.data?.message || 'Unable to download the shop export. Please try again.');
+    } finally {
+      setDownloadingExport('');
     }
   };
 
@@ -208,8 +304,8 @@ export default function Settings() {
                 <div key={shop.id} className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
-                      {shop.logoBase64 ? (
-                        <img src={shop.logoBase64} alt={shop.name} className="w-10 h-10 rounded-md object-contain border border-slate-200 mr-3 bg-white" />
+                      {shop.logoUrl || shop.logoBase64 ? (
+                        <img src={shop.logoUrl || shop.logoBase64} alt={shop.name} className="w-10 h-10 rounded-md object-contain border border-slate-200 mr-3 bg-white" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
                           <Building2 className="w-5 h-5" />
@@ -247,6 +343,51 @@ export default function Settings() {
               )}
             </div>
           </div>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
+          <form onSubmit={handleSaveCompliance} className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="flex items-center gap-2 text-lg font-medium text-slate-900"><ShieldCheck className="h-5 w-5 text-indigo-600" /> GST compliance</h2>
+            <p className="mt-1 text-sm text-slate-500">Enable these only after the active branch has complete GST, address, locality and PIN details. Production also requires an approved provider.</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <label className="flex items-center gap-3 rounded-md border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" checked={compliance.eInvoiceEnabled} onChange={(e) => setCompliance({ ...compliance, eInvoiceEnabled: e.target.checked })} /> E-invoicing</label>
+              <label className="flex items-center gap-3 rounded-md border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" checked={compliance.eWayBillEnabled} onChange={(e) => setCompliance({ ...compliance, eWayBillEnabled: e.target.checked })} /> E-way bills</label>
+              <label className="text-sm font-medium text-slate-700">IRN cancellation window (hours)<input type="number" min="1" max="168" value={compliance.cancellationWindowHours} onChange={(e) => setCompliance({ ...compliance, cancellationWindowHours: Number(e.target.value) })} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+            </div>
+            <button disabled={savingCompliance} className="mt-5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingCompliance ? 'Saving…' : 'Save compliance settings'}</button>
+          </form>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
+          <form onSubmit={handleSaveWhatsApp} className="lg:col-span-2 bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
+            <h2 className="text-lg font-medium text-slate-900 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-green-600" /> WhatsApp Cloud API</h2>
+            <p className="mt-1 text-sm text-slate-500">Connect the active branch to Meta WhatsApp so invoice PDFs can be sent from the invoice screen.</p>
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="text-sm font-medium text-slate-700">Phone Number ID
+                <input required value={whatsAppConfig.phoneNumberId} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, phoneNumberId: e.target.value })} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">Business Account ID
+                <input value={whatsAppConfig.businessAccountId} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, businessAccountId: e.target.value })} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+              <label className="text-sm font-medium text-slate-700 md:col-span-2">Access token
+                <input type="password" value={whatsAppConfig.accessToken} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, accessToken: e.target.value })} placeholder={whatsAppConfig.configured ? 'Leave blank to keep the saved token' : 'Meta permanent/system-user token'} className="mt-1 block w-full border border-slate-300 rounded-md py-2 px-3" />
+              </label>
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={whatsAppConfig.enabled} onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, enabled: e.target.checked })} /> Enable invoice sending</label>
+            <button disabled={savingWhatsApp} className="mt-5 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">{savingWhatsApp ? 'Saving...' : 'Save WhatsApp settings'}</button>
+          </form>
+        )}
+
+        {user?.role === 'SHOP_OWNER' && (
+          <section className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200" aria-labelledby="data-export-heading">
+            <h2 id="data-export-heading" className="flex items-center gap-2 text-lg font-medium text-slate-900"><Download className="h-5 w-5 text-indigo-600" /> Export active branch</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-500">Download a portable copy of shop settings, users, products, parties, invoices, payments and purchases. Secrets, password hashes and provider credentials are excluded.</p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => downloadShopExport('zip')} disabled={Boolean(downloadingExport)} className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"><Download className="h-4 w-4" />{downloadingExport === 'zip' ? 'Preparing ZIP…' : 'Download ZIP + CSV'}</button>
+              <button type="button" onClick={() => downloadShopExport('json')} disabled={Boolean(downloadingExport)} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileJson className="h-4 w-4" />{downloadingExport === 'json' ? 'Preparing JSON…' : 'Download JSON'}</button>
+            </div>
+            {exportStatus && <p className="mt-3 text-sm font-medium text-slate-700" role="status">{exportStatus}</p>}
+          </section>
         )}
 
       {/* Add Branch Modal */}
@@ -296,6 +437,10 @@ export default function Settings() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Branch Address</label>
                   <textarea rows="3" required value={newShop.address} onChange={e => setNewShop({...newShop, address: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Locality<input type="text" value={newShop.locality} onChange={e => setNewShop({...newShop, locality: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  <label className="block text-sm font-medium text-slate-700">PIN code<input type="text" inputMode="numeric" maxLength="6" value={newShop.pincode} onChange={e => setNewShop({...newShop, pincode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
                 </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                   <button type="submit" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:col-start-2 sm:text-sm">
@@ -359,11 +504,15 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-slate-700">Address</label>
                   <textarea rows="2" required value={editShopData.address} onChange={e => setEditShopData({...editShopData, address: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Locality<input type="text" value={editShopData.locality} onChange={e => setEditShopData({...editShopData, locality: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                  <label className="block text-sm font-medium text-slate-700">PIN code<input type="text" inputMode="numeric" maxLength="6" value={editShopData.pincode} onChange={e => setEditShopData({...editShopData, pincode: e.target.value})} className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2" /></label>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Branch Logo</label>
                   <div className="flex items-center space-x-4">
-                    {editShopData.logoBase64 && (
-                      <img src={editShopData.logoBase64} alt="Preview" className="h-12 w-12 object-contain rounded border border-slate-200" />
+                    {editShopData.logoPreviewUrl && (
+                      <img src={editShopData.logoPreviewUrl} alt="Preview" className="h-12 w-12 object-contain rounded border border-slate-200" />
                     )}
                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                   </div>

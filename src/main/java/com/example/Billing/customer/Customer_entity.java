@@ -3,6 +3,7 @@ package com.example.Billing.customer;
 import com.example.Billing.shop.Shop_entity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(
@@ -41,11 +42,30 @@ public class Customer_entity {
     @Column(length = 500)
     private String address;
 
+    @Column(length = 100)
+    private String locality;
+
+    @Column(length = 6)
+    private String pincode;
+
     @Column(length = 15)
     private String gstin;
 
     @Column(length = 100)
     private String state;
+
+    @Column(name = "state_code", length = 2)
+    private String stateCode;
+
+    @Column(name = "billing_address", length = 500)
+    private String billingAddress;
+
+    @Column(name = "shipping_address", length = 500)
+    private String shippingAddress;
+
+    @Column(name = "credit_balance", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal creditBalance = BigDecimal.ZERO;
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;

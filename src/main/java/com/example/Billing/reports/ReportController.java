@@ -24,7 +24,7 @@ public class ReportController {
     // SALES REPORT
     // =====================================================
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @GetMapping("/sales")
     public ResponseEntity<SalesReportResponse_Dto> getSalesReport(
 
@@ -61,7 +61,7 @@ public class ReportController {
     // =====================================================
     // PRODUCT SALES
     // =====================================================
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @GetMapping("/products")
     public ResponseEntity<List<ProductSalesResponse_Dto>>
     getProductSales(
@@ -97,7 +97,7 @@ public class ReportController {
     // =====================================================
     // CUSTOMER SALES
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @GetMapping("/customers/new")
     public ResponseEntity<List<CustomerSalesResponse_Dto>> getNewCustomers(
             org.springframework.security.core.Authentication authentication,
@@ -111,7 +111,7 @@ public class ReportController {
     // =====================================================
 
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @GetMapping("/customers")
     public ResponseEntity<List<CustomerSalesResponse_Dto>>
     getCustomerSales(
@@ -149,7 +149,7 @@ public class ReportController {
     // =====================================================
 
 
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'MANAGER')")
     @GetMapping("/payments")
     public ResponseEntity<PaymentReportResponse_Dto>
     getPaymentReport(
@@ -192,8 +192,8 @@ public class ReportController {
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
 
-            throw new RuntimeException(
-                    "User is not authenticated"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required"
             );
         }
 
@@ -204,8 +204,8 @@ public class ReportController {
 
         if (!(principal instanceof User_entity)) {
 
-            throw new RuntimeException(
-                    "Invalid authenticated user"
+            throw new com.example.Billing.common.AppException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Authentication is required"
             );
         }
 

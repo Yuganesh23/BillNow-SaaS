@@ -15,7 +15,7 @@ const QRScannerModal = ({ onScan, onClose }) => {
         scanner.clear();
         onScan(decodedText);
       },
-      (err) => {
+      (_err) => {
         // quiet fail for standard scan attempts
       }
     );

@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import com.example.Billing.common.AppException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -22,17 +24,14 @@ public class WhatsAppStatusService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markSending(
-            Long invoiceId
+            Long invoiceId,
+            Long shopId
     ) {
 
         Invoice_entity invoice =
                 invoiceRepository
-                        .findById(invoiceId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .findByIdAndShopId(invoiceId, shopId)
+                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
 
 
         invoice.setWhatsappStatus(
@@ -58,17 +57,14 @@ public class WhatsAppStatusService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markSent(
-            Long invoiceId
+            Long invoiceId,
+            Long shopId
     ) {
 
         Invoice_entity invoice =
                 invoiceRepository
-                        .findById(invoiceId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .findByIdAndShopId(invoiceId, shopId)
+                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
 
 
         invoice.setWhatsappStatus(
@@ -95,17 +91,14 @@ public class WhatsAppStatusService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(
             Long invoiceId,
+            Long shopId,
             String errorMessage
     ) {
 
         Invoice_entity invoice =
                 invoiceRepository
-                        .findById(invoiceId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Invoice not found"
-                                )
-                        );
+                        .findByIdAndShopId(invoiceId, shopId)
+                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Invoice not found"));
 
 
         invoice.setWhatsappStatus(

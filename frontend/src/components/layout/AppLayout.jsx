@@ -3,12 +3,13 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { Building2 } from 'lucide-react';
+import { OfflineQueueStatus } from '../common/OfflineQueueStatus';
+import { LanguageSelector, useLocale } from '../../context/LocaleContext';
 import { 
   LayoutDashboard, 
   Package, 
   Users, 
   FileText, 
-  CreditCard, 
   BarChart3, 
   Settings, 
   Star, 
@@ -18,10 +19,12 @@ import {
   UserCog,
   Truck,
   ShoppingBag
+  ,Workflow, Upload
 } from 'lucide-react';
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => {
   const { logout, user } = useAuth();
+  const { t } = useLocale();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,21 +33,23 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
   };
 
     const allNavItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Invoices', path: '/invoices', icon: FileText },
-    { name: 'Products', path: '/products', icon: Package },
-    { name: 'Purchases', path: '/purchases', icon: ShoppingBag },
-    { name: 'Suppliers', path: '/suppliers', icon: Truck },
-    { name: 'Customers', path: '/customers', icon: Users },
-    { name: 'Billers', path: '/billers', icon: UserCog },
-    { name: 'Reports', path: '/reports', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
-    { name: 'Subscription', path: '/subscription', icon: Star },
+    { key: 'dashboard', name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { key: 'invoices', name: 'Invoices', path: '/invoices', icon: FileText },
+    { key: 'products', name: 'Products', path: '/products', icon: Package },
+    { key: 'purchases', name: 'Purchases', path: '/purchases', icon: ShoppingBag },
+    { key: 'suppliers', name: 'Suppliers', path: '/suppliers', icon: Truck },
+    { key: 'customers', name: 'Customers', path: '/customers', icon: Users },
+    { key: 'workflows', name: 'Workflows', path: '/workflows', icon: Workflow },
+    { key: 'billers', name: 'Billers', path: '/billers', icon: UserCog },
+    { key: 'reports', name: 'Reports', path: '/reports', icon: BarChart3 },
+    { key: 'imports', name: 'Imports', path: '/imports', icon: Upload },
+    { key: 'settings', name: 'Settings', path: '/settings', icon: Settings },
+    { key: 'subscription', name: 'Subscription', path: '/subscription', icon: Star },
   ];
 
-  const navItems = user?.role === 'SHOP_OWNER' 
-    ? allNavItems 
-    : allNavItems.filter(item => ['Invoices', 'Customers'].includes(item.name));
+  const navItems = ['SHOP_OWNER', 'MANAGER'].includes(user?.role)
+    ? allNavItems
+    : allNavItems.filter(item => ['Invoices', 'Customers', 'Workflows'].includes(item.name));
 
   return (
     <>
@@ -81,7 +86,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
                 }
               >
                 <Icon className="w-5 h-5 mr-3" />
-                {item.name}
+                {t(item.key)}
               </NavLink>
             );
           })}
@@ -93,7 +98,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
             className="flex items-center w-full px-2 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-900"
           >
             <LogOut className="w-5 h-5 mr-3" />
-            Logout
+            {t('logout')}
           </button>
         </div>
       </div>
@@ -148,6 +153,8 @@ export const AppLayout = () => {
           </div>
           
           <div className="flex items-center">
+            <OfflineQueueStatus />
+            <LanguageSelector className="mr-3 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs" />
             <span className="text-sm font-medium text-slate-700">{user?.name || 'User'}</span>
             <div className="w-8 h-8 ml-3 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
               {(user?.name || 'U').charAt(0)}

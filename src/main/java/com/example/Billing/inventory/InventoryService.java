@@ -1,11 +1,13 @@
 package com.example.Billing.inventory;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.product.ProductRepository;
 import com.example.Billing.product.Product_entity;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,11 +49,7 @@ public class InventoryService {
                                 request.getProductId(),
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
 
         // =================================================
@@ -200,11 +198,7 @@ public class InventoryService {
                                 productId,
                                 shop.getId()
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found in this shop"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
 
         return mapInventoryResponse(
@@ -259,11 +253,7 @@ public class InventoryService {
                         productId,
                         shop.getId()
                 )
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Product not found in this shop"
-                        )
-                );
+                .orElseThrow(() -> productNotFound());
 
 
         return inventoryRepository
@@ -338,6 +328,10 @@ public class InventoryService {
 
 
         return shopContextResolver.resolveActiveShop(user);
+    }
+
+    private AppException productNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found");
     }
 
 

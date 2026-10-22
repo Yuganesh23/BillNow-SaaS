@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface SupplierRepository extends JpaRepository<Supplier_entity, Long> {
     List<Supplier_entity> findByShopIdOrderByCreatedAtDesc(Long shopId);
     Optional<Supplier_entity> findByIdAndShopId(Long id, Long shopId);
+    Optional<Supplier_entity> findByShopIdAndBusinessNameIgnoreCase(Long shopId, String businessName);
 }

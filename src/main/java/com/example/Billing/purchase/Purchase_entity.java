@@ -38,11 +38,23 @@ public class Purchase_entity {
     private BigDecimal taxAmount;
     private BigDecimal grandTotal;
 
+    @Column(name = "taxable_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default private BigDecimal taxableAmount = BigDecimal.ZERO;
+    @Column(name = "cgst_total", nullable = false, precision = 12, scale = 2)
+    @Builder.Default private BigDecimal cgstTotal = BigDecimal.ZERO;
+    @Column(name = "sgst_total", nullable = false, precision = 12, scale = 2)
+    @Builder.Default private BigDecimal sgstTotal = BigDecimal.ZERO;
+    @Column(name = "igst_total", nullable = false, precision = 12, scale = 2)
+    @Builder.Default private BigDecimal igstTotal = BigDecimal.ZERO;
+    @Column(name = "cess_total", nullable = false, precision = 12, scale = 2)
+    @Builder.Default private BigDecimal cessTotal = BigDecimal.ZERO;
+
     @Column(length = 20)
     private String status; // PAID, PENDING, PARTIAL
     
     @Column(length = 50)
     private String paymentMethod;
+    @Builder.Default
     private BigDecimal amountPaid = BigDecimal.ZERO;
 
     @Column(name = "created_at")

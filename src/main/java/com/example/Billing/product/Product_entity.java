@@ -54,9 +54,17 @@ public class Product_entity {
     @Column(length = 20)
     private String hsnCode;
 
+    @Column(length = 10, nullable = false)
+    @Builder.Default
+    private String uqc = "NOS";
+
     @Column(precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal gstRate = BigDecimal.ZERO;
+
+    @Column(name = "cess_rate", precision = 5, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal cessRate = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

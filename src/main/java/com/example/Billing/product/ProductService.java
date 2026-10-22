@@ -1,11 +1,13 @@
 package com.example.Billing.product;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.shop.Shop_entity;
 import com.example.Billing.supplier.SupplierRepository;
 import com.example.Billing.supplier.Supplier_entity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import com.example.Billing.config.ShopContextResolver;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ public class ProductService {
         Shop_entity shop = getUserShop(user);
 
         Long shopId = shop.getId();
+        validateHsn(request.getHsnCode(), shop.getHsnCodeLength());
 
         if (productRepository.existsByShopIdAndSku(
                 shopId,
@@ -63,6 +66,8 @@ public class ProductService {
                         .hsnCode(request.getHsnCode())
                         .gstRate(request.getGstRate() != null ? request.getGstRate() : java.math.BigDecimal.ZERO)
                         .taxType(request.getTaxType() != null ? request.getTaxType() : TaxType.NONE)
+                        .uqc(request.getUqc() == null || request.getUqc().isBlank() ? "NOS" : request.getUqc().trim().toUpperCase())
+                        .cessRate(request.getCessRate() == null ? java.math.BigDecimal.ZERO : request.getCessRate())
                         .active(true)
                         .build();
 
@@ -116,11 +121,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         return mapToResponse(product);
     }
@@ -138,6 +139,7 @@ public class ProductService {
         Shop_entity shop = getUserShop(user);
 
         Long shopId = shop.getId();
+        validateHsn(request.getHsnCode(), shop.getHsnCodeLength());
 
         Product_entity product =
                 productRepository
@@ -145,11 +147,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
 
         // Check duplicate SKU
@@ -183,6 +181,8 @@ public class ProductService {
         product.setHsnCode(request.getHsnCode());
         if (request.getGstRate() != null) product.setGstRate(request.getGstRate());
         if (request.getTaxType() != null) product.setTaxType(request.getTaxType());
+        if (request.getUqc() != null && !request.getUqc().isBlank()) product.setUqc(request.getUqc().trim().toUpperCase());
+        if (request.getCessRate() != null) product.setCessRate(request.getCessRate());
 
         Product_entity updatedProduct =
                 productRepository.save(product);
@@ -209,11 +209,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         // Soft delete
         product.setActive(false);
@@ -241,11 +237,7 @@ public class ProductService {
                                 productId,
                                 shopId
                         )
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Product not found"
-                                )
-                        );
+                        .orElseThrow(() -> productNotFound());
 
         product.setActive(true);
 
@@ -286,6 +278,10 @@ public class ProductService {
         return shopContextResolver.resolveActiveShop(user);
     }
 
+    private AppException productNotFound() {
+        return new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found");
+    }
+
 
     // =====================================================
     // MAPPER
@@ -318,6 +314,17 @@ public class ProductService {
                 .hsnCode(product.getHsnCode())
                 .gstRate(product.getGstRate())
                 .taxType(product.getTaxType())
+                .uqc(product.getUqc())
+                .cessRate(product.getCessRate())
                 .build();
+    }
+
+    private void validateHsn(String hsn, Integer configuredLength) {
+        if (hsn == null || hsn.isBlank()) return;
+        int length = configuredLength == null ? 4 : configuredLength;
+        if (!hsn.matches("\\d{" + length + "}")) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_HSN",
+                    "HSN/SAC must contain exactly " + length + " digits for this shop");
+        }
     }
 }

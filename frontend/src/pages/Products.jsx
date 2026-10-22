@@ -168,7 +168,7 @@ export default function Products() {
       setFormData(prev => ({ ...prev, supplierId: res.data.id }));
       setShowAddSupplier(false);
       setNewSupplierName('');
-    } catch(err) { alert('Failed to create supplier'); }
+    } catch { alert('Failed to create supplier'); }
   };
 
   const initScanner = () => {
@@ -216,7 +216,7 @@ export default function Products() {
       {loading ? (
         <LoadingState />
       ) : (
-        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
+        <div className="mobile-table-scroll bg-white shadow-sm ring-1 ring-slate-200 rounded-lg">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>

@@ -1,6 +1,8 @@
 package com.example.Billing.auth;
 
 public enum Role {
-    OWNER,
-    BILLER
+    SHOP_OWNER,
+    MANAGER,
+    BILLER,
+    VIEWER
 }

@@ -24,7 +24,8 @@ import java.util.List;
                                 "shop_id",
                                 "invoiceNumber"
                         }
-                )
+                ),
+                @UniqueConstraint(name = "uk_invoice_shop_idempotency", columnNames = {"shop_id", "idempotency_key"})
         }
 )
 @Getter
@@ -94,6 +95,9 @@ public class Invoice_entity {
     )
     private String invoiceNumber;
 
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
 
     // =====================================================
     // AMOUNTS
@@ -137,6 +141,38 @@ public class Invoice_entity {
     @Column(precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal igstTotal = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cessTotal = BigDecimal.ZERO;
+
+    @Column(name = "round_off", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal roundOff = BigDecimal.ZERO;
+
+    @Column(name = "place_of_supply_code", length = 2)
+    private String placeOfSupplyCode;
+
+    @Column(name = "document_type", nullable = false, length = 20)
+    @Builder.Default
+    private String documentType = "TAX_INVOICE";
+
+    @Column(name = "reverse_charge", nullable = false)
+    @Builder.Default
+    private boolean reverseCharge = false;
+
+    @Column(name = "cancellation_reason", length = 500)
+    private String cancellationReason;
+
+    @Builder.Default
+    @Column(name = "compliance_locked", nullable = false)
+    private boolean complianceLocked = false;
+
+    @Column(name = "financial_year", length = 7)
+    private String financialYear;
+
+    @Column(name = "series_number")
+    private Integer seriesNumber;
 
     @Column(nullable = false)
     @Builder.Default
