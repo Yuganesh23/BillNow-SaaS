@@ -31,11 +31,12 @@ Last reviewed against repository state: 16 October 2026. A checked item means re
 ## Commercial and support
 
 - [x] Annual Base, Pro and Enterprise prices and configurable plan limits are displayed.
-- [x] Razorpay webhook processing is signature-checked and idempotent.
+- [x] Razorpay webhook processing is signature-checked and idempotent. (The signature result was previously ignored; fixed and tested on 22 October 2026.)
+- [x] Cancellation at period end, plan upgrades/downgrades, billing history and subscription tax invoices are implemented (`docs/SUBSCRIPTION_BILLING.md`).
 - [ ] Final renewal, cancellation, refund, failed-payment and downgrade policy requires owner/legal approval.
 - [ ] Real support WhatsApp number, support hours, escalation targets and customer SLA are not supplied.
 - [ ] Replace illustrative marketing scenarios with approved customer proof before presenting them as testimonials.
-- [ ] Confirm plan IDs, webhook URL/secret, live-mode payment flow, GST on subscription invoices and refund workflow.
+- [ ] Confirm plan IDs, webhook URL/secret and enabled events, live-mode payment flow, plan-change charges, GST on subscription invoices (rate, SAC, seller details) and refund workflow.
 
 ## Legal and compliance
 

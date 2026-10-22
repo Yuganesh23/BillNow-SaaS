@@ -15,9 +15,16 @@ All notable XenBill changes are recorded here. The project has not yet published
 - Shop JSON/ZIP export and a secure customer invoice portal.
 - Professional XenBill landing page, SEO metadata, draft Privacy/Terms pages and security headers.
 - Authenticated OpenAPI contract and Swagger UI.
+- Subscription cancellation at period end, plan upgrades/downgrades, billing history and GST tax invoices for subscription payments.
+
+### Fixed
+
+- Cancelled subscriptions and failed renewals no longer lock shops out of their customers and invoices; lapsed shops keep read-only access.
+- Subscription and invoice-entitlement errors return specific 4xx codes instead of HTTP 500.
 
 ### Security
 
+- Razorpay webhooks with an invalid signature are rejected; previously the verification result was ignored.
 - Tenant-scoped access tests, hardened auth cookies, HMAC password-reset tokens, rate limiting, secret validation, request IDs and PII-scrubbed error reporting.
 
 ### Known launch blockers

@@ -31,3 +31,15 @@ References to verify before launch: GST portal state/UT code list, GST invoice r
 - A generated IRN locks ordinary invoice cancellation. It must be cancelled through the compliance workflow inside the configured window.
 - The e-way-bill cancellation window is currently 24 hours from generation. A CA and the selected provider must verify this rule before production enablement.
 - BillNow does not decide whether a particular invoice is legally required to have an IRN or e-way bill. Operators remain responsible for applicability and thresholds.
+
+## BillNow subscription invoices
+
+These rules apply to the tax invoices BillNow issues to shops for its own subscription (see `docs/SUBSCRIPTION_BILLING.md`).
+
+- The amount Razorpay collected is treated as GST-inclusive. Taxable value = amount × 100 / (100 + rate), rounded to two decimals `HALF_UP`; tax is the remainder.
+- The rate (`BILLING_SAAS_GST_RATE`, default 18%) and the SAC (`BILLING_SAAS_SAC_CODE`, no default) are configuration and must be confirmed by a CA.
+- Place of supply: the state in the shop's GSTIN when it is valid; otherwise the shop's selected state; if that is missing or the legacy `97` placeholder, the supplier's state. A CA should confirm this treatment for unregistered recipients.
+- Same supplier and place-of-supply state produces CGST and SGST; the odd paisa goes to SGST so the invoice adds up exactly. Different states produce IGST.
+- Numbers use one platform-wide series per financial year (April–March), `PREFIX/FY/NNNNN`, up to 16 characters. If seller details are configured after payments were received, those invoices are numbered when first downloaded, so numbers may not follow payment dates for that period.
+- Supplier and recipient details are copied onto the invoice when it is issued; later profile edits do not change issued invoices.
+- Refunds, credit notes for subscriptions and export (non-INR) customers are not automated.
