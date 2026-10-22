@@ -1,6 +1,10 @@
 package com.example.Billing.subscription;
 
 import com.example.Billing.auth.SecurityUtils;
+import com.example.Billing.subscription.billing.SaaSBillingCharge_entity;
+import com.example.Billing.subscription.billing.SaaSBillingService;
+import com.example.Billing.subscription.billing.SaaSChargeResponse_Dto;
+import com.example.Billing.subscription.billing.SaaSInvoicePdfService;
 import com.example.Billing.subscription.dto.ChangePlanRequest_Dto;
 import com.example.Billing.subscription.dto.CreateSubscriptionRequest_Dto;
 import com.example.Billing.subscription.dto.SubscriptionResponse_Dto;
@@ -11,6 +15,8 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +31,8 @@ public class SaaSSubscriptionController {
     private final SecurityUtils securityUtils;
     private final com.example.Billing.config.ShopContextResolver shopContextResolver;
     private final PlanLimitsService planLimitsService;
+    private final SaaSBillingService billingService;
+    private final SaaSInvoicePdfService invoicePdfService;
 
     @GetMapping("/usage")
     @PreAuthorize("hasRole('SHOP_OWNER')")
@@ -158,5 +166,32 @@ public class SaaSSubscriptionController {
                 subscriptionService
                         .cancelPlanChange(user)
         );
+    }
+
+    // =========================================================
+    // BILLING HISTORY & TAX INVOICES
+    // =========================================================
+
+    @GetMapping("/charges")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ResponseEntity<java.util.List<SaaSChargeResponse_Dto>> charges() {
+        Long shopId = shopContextResolver.resolveActiveShopId(securityUtils.getCurrentUser());
+        boolean sellerConfigured = billingService.isSellerConfigured();
+        return ResponseEntity.ok(billingService.history(shopId).stream()
+                .map(charge -> SaaSChargeResponse_Dto.from(charge, sellerConfigured))
+                .toList());
+    }
+
+    @GetMapping("/charges/{chargeId}/invoice")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ResponseEntity<byte[]> chargeInvoice(@PathVariable Long chargeId) {
+        Long shopId = shopContextResolver.resolveActiveShopId(securityUtils.getCurrentUser());
+        SaaSBillingCharge_entity charge = billingService.invoicedCharge(shopId, chargeId);
+        byte[] pdf = invoicePdfService.render(charge);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + charge.getInvoiceNumber().replace('/', '-') + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

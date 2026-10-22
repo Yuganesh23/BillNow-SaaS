@@ -10,6 +10,7 @@ import com.example.Billing.subscription.dto.ChangePlanRequest_Dto;
 import com.example.Billing.subscription.dto.CreateSubscriptionRequest_Dto;
 import com.example.Billing.subscription.dto.SubscriptionResponse_Dto;
 import com.example.Billing.subscription.dto.VerifySubscriptionRequest_Dto;
+import com.example.Billing.subscription.billing.SaaSBillingService;
 
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
@@ -44,6 +45,7 @@ public class SaaSSubscriptionService {
     private final SaaSSubscriptionRepository subscriptionRepository;
     private final SubscriptionWebhookEventRepository webhookEvents;
     private final PlanLimitsService planLimitsService;
+    private final SaaSBillingService billingService;
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
@@ -425,6 +427,12 @@ public class SaaSSubscriptionService {
 
         syncShopAccess(shop, subscription);
 
+        JSONObject payment = paymentEntity(event);
+
+        if ("subscription.charged".equals(eventName) && payment != null) {
+            billingService.recordCharge(subscription, payment);
+        }
+
         webhookEvents.save(SubscriptionWebhookEvent.builder()
                 .shop(shop)
                 .subscription(subscription)
@@ -432,6 +440,12 @@ public class SaaSSubscriptionService {
                 .eventType(eventName)
                 .payloadHash(WebhookEventIdentity.hash(payload))
                 .build());
+    }
+
+    private static JSONObject paymentEntity(JSONObject event) {
+        JSONObject payload = event.optJSONObject("payload");
+        JSONObject payment = payload == null ? null : payload.optJSONObject("payment");
+        return payment == null ? null : payment.optJSONObject("entity");
     }
 
     private void verifyWebhookSignature(String payload, String signature) {

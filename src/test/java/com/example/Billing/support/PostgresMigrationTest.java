@@ -46,7 +46,9 @@ class PostgresMigrationTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         // Hibernate creates the current model for this compatibility fixture. Remove
         // objects owned by later migrations so the replay starts from the pre-V7 shape
-        // instead of attempting to create V7/V8 relations twice.
+        // instead of attempting to create V7/V8/V11 relations twice.
+        jdbc.execute("drop table if exists saas_billing_charges");
+        jdbc.execute("drop table if exists saas_invoice_sequences");
         jdbc.execute("drop table if exists customer_portal_access");
         jdbc.execute("drop table if exists subscription_webhook_events");
 
@@ -63,6 +65,8 @@ class PostgresMigrationTest {
         assertThat(jdbc.queryForObject("select to_regclass('subscription_webhook_events') is not null", Boolean.class))
                 .isTrue();
         assertThat(jdbc.queryForObject("select to_regclass('customer_portal_access') is not null", Boolean.class))
+                .isTrue();
+        assertThat(jdbc.queryForObject("select to_regclass('saas_billing_charges') is not null", Boolean.class))
                 .isTrue();
 
         Long userId = jdbc.queryForObject("insert into users(name,email,password,role,active) values ('Perf Owner','perf@example.test','x','SHOP_OWNER',true) returning id", Long.class);
