@@ -1,6 +1,7 @@
 package com.example.Billing.subscription;
 
 import com.example.Billing.auth.User_entity;
+import com.example.Billing.common.AppException;
 import com.example.Billing.config.RazorpayConfig.RazorpayProperties;
 import com.example.Billing.shop.Shop_entity;
 import com.example.Billing.shop.SubscriptionTier;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
 
@@ -513,11 +515,17 @@ public class SaaSSubscriptionService {
             // Verify webhook signature
             // -------------------------------------------------
 
-            Utils.verifyWebhookSignature(
+            if (!Utils.verifyWebhookSignature(
                     payload,
                     signature,
                     webhookSecret
-            );
+            )) {
+                throw new AppException(
+                        HttpStatus.BAD_REQUEST,
+                        "INVALID_WEBHOOK_SIGNATURE",
+                        "Invalid Razorpay webhook signature"
+                );
+            }
 
             JSONObject event =
                     new JSONObject(payload);
@@ -682,6 +690,10 @@ public class SaaSSubscriptionService {
                     .eventType(eventName)
                     .payloadHash(WebhookEventIdentity.hash(payload))
                     .build());
+
+        } catch (AppException e) {
+
+            throw e;
 
         } catch (RazorpayException e) {
 

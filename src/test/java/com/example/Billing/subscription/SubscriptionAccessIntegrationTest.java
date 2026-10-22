@@ -103,6 +103,27 @@ class SubscriptionAccessIntegrationTest {
                 .isNotNull();
     }
 
+    @Test
+    void webhookWithForgedSignatureIsRejectedWithoutChangingState() {
+        var tenant = fixture.createTenant("Forged Webhook");
+        SaaSSubscription_entity subscription = paidSubscription(tenant.shop().getId(), SaaSPlan.BASE,
+                LocalDateTime.now().plusDays(30).truncatedTo(ChronoUnit.SECONDS));
+        subscription.setActive(false);
+        subscription.setStatus(SubscriptionStatus.AUTHENTICATION_PENDING);
+        subscriptions.save(subscription);
+
+        String payload = event("subscription.activated", subscription);
+        assertThatThrownBy(() -> subscriptionService.processWebhook(payload, "0".repeat(64)))
+                .isInstanceOfSatisfying(AppException.class, exception -> {
+                    assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(exception.getCode()).isEqualTo("INVALID_WEBHOOK_SIGNATURE");
+                });
+
+        SaaSSubscription_entity unchanged = subscriptions.findById(subscription.getId()).orElseThrow();
+        assertThat(unchanged.isActive()).isFalse();
+        assertThat(unchanged.getStatus()).isEqualTo(SubscriptionStatus.AUTHENTICATION_PENDING);
+    }
+
     SaaSSubscription_entity paidSubscription(Long shopId, SaaSPlan plan, LocalDateTime paidThrough) {
         Shop_entity shop = shops.findById(shopId).orElseThrow();
         shop.setSubscriptionTier(SubscriptionTier.valueOf(plan.name()));
