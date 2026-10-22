@@ -5,14 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
-import org.springframework.beans.factory.annotation.Value;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,12 +20,9 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
     private final AuthRateLimiter authRateLimiter;
+    private final AuthCookies authCookies;
 
-    @Value("${auth.cookie.secure:false}")
-    private boolean secureCookie;
 
-    @Value("${auth.cookie.same-site:Lax}")
-    private String sameSite;
 
 
     // =====================================================
@@ -79,7 +72,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse_Dto> refresh(HttpServletRequest request) {
-        String refreshToken = cookieValue(request, "refresh_token");
+        String refreshToken = authCookies.refreshToken(request);
         if (refreshToken == null) {
             throw new com.example.Billing.common.AppException(
                     HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Session has expired. Please sign in again.");
@@ -99,11 +92,8 @@ public class AuthController {
     // =====================================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
-        refreshTokenService.revoke(cookieValue(request, "refresh_token"));
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, expiredCookie("jwt").toString());
-        headers.add(HttpHeaders.SET_COOKIE, expiredCookie("refresh_token").toString());
-        return ResponseEntity.ok().headers(headers).body(Map.of("message", "Logged out successfully"));
+        refreshTokenService.revoke(authCookies.refreshToken(request));
+        return ResponseEntity.ok().headers(authCookies.clear()).body(Map.of("message", "Logged out successfully"));
     }
 
     // =====================================================
@@ -146,27 +136,9 @@ public class AuthController {
     }
 
     private HttpHeaders cookieHeaders(String accessToken, String refreshToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, authCookie("jwt", accessToken, Duration.ofMinutes(jwtService.getAccessTokenMinutes())).toString());
-        headers.add(HttpHeaders.SET_COOKIE, authCookie("refresh_token", refreshToken, Duration.ofDays(refreshTokenService.getRefreshTokenDays())).toString());
-        return headers;
+        return authCookies.issue(
+                accessToken, Duration.ofMinutes(jwtService.getAccessTokenMinutes()),
+                refreshToken, Duration.ofDays(refreshTokenService.getRefreshTokenDays()));
     }
 
-    private ResponseCookie authCookie(String name, String value, Duration maxAge) {
-        return ResponseCookie.from(name, value)
-                .httpOnly(true).secure(secureCookie).path("/").maxAge(maxAge).sameSite(sameSite).build();
-    }
-
-    private ResponseCookie expiredCookie(String name) {
-        return ResponseCookie.from(name, "")
-                .httpOnly(true).secure(secureCookie).path("/").maxAge(Duration.ZERO).sameSite(sameSite).build();
-    }
-
-    private String cookieValue(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
-        return List.of(request.getCookies()).stream()
-                .filter(cookie -> name.equals(cookie.getName()))
-                .map(Cookie::getValue)
-                .findFirst().orElse(null);
-    }
 }

@@ -11,7 +11,8 @@ class JwtAuthFilterTest {
 
     private final JwtAuthFilter filter = new JwtAuthFilter(
             mock(JwtService.class),
-            mock(userRepository.class)
+            mock(userRepository.class),
+            new AuthCookies("split", false, "Lax")
     );
 
     @Test

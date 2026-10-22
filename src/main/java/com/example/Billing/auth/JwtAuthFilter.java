@@ -4,7 +4,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +22,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final userRepository userRepository;
+    private final AuthCookies authCookies;
 
 
     // =====================================================
@@ -65,17 +65,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // GET AUTHORIZATION HEADER
         // =================================================
 
-        String token = null;
-
         // 1. Try from Cookie
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("jwt".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
+        String token = authCookies.accessToken(request);
 
         // 2. Fallback to Authorization Header
         if (token == null || token.isBlank()) {
