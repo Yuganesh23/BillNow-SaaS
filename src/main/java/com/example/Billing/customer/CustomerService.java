@@ -231,7 +231,9 @@ public class CustomerService {
 
         if (!shopContextResolver.resolveActiveShop(user).isActive()) {
 
-            throw new RuntimeException(
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "SHOP_INACTIVE",
                     "Shop is not active"
             );
         }

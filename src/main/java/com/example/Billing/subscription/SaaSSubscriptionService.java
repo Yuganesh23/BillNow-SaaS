@@ -60,6 +60,9 @@ public class SaaSSubscriptionService {
     @Value("${razorpay.enterprise-yearly-plan-id:${razorpay.yearly-plan-id}}")
     private String enterpriseYearlyPlanId;
 
+    @Value("${billing.subscription.failed-payment-grace-days:0}")
+    private int failedPaymentGraceDays;
+
 
     // =========================================================
     // CREATE SUBSCRIPTION
@@ -209,6 +212,11 @@ public class SaaSSubscriptionService {
 
             subscription.setActive(false);
 
+            // A reused row must not carry the previous subscription's period.
+            subscription.setStartDate(null);
+            subscription.setEndDate(null);
+            subscription.setNextBillingDate(null);
+
             subscriptionRepository.save(
                     subscription
             );
@@ -339,11 +347,10 @@ public class SaaSSubscriptionService {
             );
 
             // -------------------------------------------------
-            // Activate shop
+            // Grant plan access
             // -------------------------------------------------
 
-            shop.setActive(true);
-            applyPlanToShop(shop, subscription);
+            syncShopAccess(shop, subscription);
 
             return mapToResponse(subscription);
 
@@ -472,10 +479,10 @@ public class SaaSSubscriptionService {
             );
 
             // -------------------------------------------------
-            // Disable SaaS shop
+            // Access continues until the paid-through date
             // -------------------------------------------------
 
-            shop.setActive(false);
+            syncShopAccess(shop, subscription);
 
             return mapToResponse(subscription);
 
@@ -666,10 +673,7 @@ public class SaaSSubscriptionService {
             Shop_entity shop =
                     subscription.getShop();
 
-            shop.setActive(
-                    subscription.isActive()
-            );
-            applyPlanToShop(shop, subscription);
+            syncShopAccess(shop, subscription);
 
             webhookEvents.save(SubscriptionWebhookEvent.builder()
                     .shop(shop)
@@ -811,18 +815,36 @@ public class SaaSSubscriptionService {
         };
     }
 
-    private void applyPlanToShop(Shop_entity shop, SaaSSubscription_entity subscription) {
-        if (!subscription.isActive()) return;
-        SubscriptionTier tier = switch (subscription.getPlan()) {
-            case BASE -> SubscriptionTier.BASE;
-            case PRO -> SubscriptionTier.PRO;
-            case ENTERPRISE -> SubscriptionTier.ENTERPRISE;
-            default -> null;
-        };
-        if (tier != null) shop.setSubscriptionTier(tier);
-        shop.setSubscriptionEndsAt(subscription.getEndDate() != null
-                ? subscription.getEndDate()
-                : LocalDateTime.now().plusYears(1));
+    /*
+     * Plan access is decided only by the shop's tier and subscriptionEndsAt,
+     * which PlanLimitsService enforces. The shop's own active flag is never
+     * used for billing, so a lapsed shop keeps read access to its data.
+     */
+    private void syncShopAccess(Shop_entity shop, SaaSSubscription_entity subscription) {
+        if (subscription.isActive()) {
+            SubscriptionTier tier = switch (subscription.getPlan()) {
+                case BASE -> SubscriptionTier.BASE;
+                case PRO -> SubscriptionTier.PRO;
+                case ENTERPRISE -> SubscriptionTier.ENTERPRISE;
+                default -> null;
+            };
+            if (tier != null) shop.setSubscriptionTier(tier);
+            shop.setSubscriptionEndsAt(subscription.getEndDate() != null
+                    ? subscription.getEndDate()
+                    : LocalDateTime.now().plusYears(1));
+            return;
+        }
+        if (shop.getSubscriptionTier() == null || shop.getSubscriptionTier() == SubscriptionTier.TRIAL) return;
+        if (subscription.getEndDate() == null) return;
+        LocalDateTime paidThrough = subscription.getEndDate();
+        if (isPaymentFailure(subscription.getStatus())) paidThrough = paidThrough.plusDays(failedPaymentGraceDays);
+        shop.setSubscriptionEndsAt(paidThrough);
+    }
+
+    private static boolean isPaymentFailure(SubscriptionStatus status) {
+        return status == SubscriptionStatus.AUTHENTICATION_PENDING
+                || status == SubscriptionStatus.PAYMENT_FAILED
+                || status == SubscriptionStatus.HALTED;
     }
 
 

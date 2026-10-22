@@ -252,33 +252,6 @@ public class InvoiceService {
         Long shopId =
                 shop.getId();
 
-        // -------------------------------------------------
-        // SUBSCRIPTION CHECK
-        // -------------------------------------------------
-        
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
-        
-        if (tier == null) {
-            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
-            shop.setSubscriptionTier(tier);
-            shop.setTrialEndsAt(now.plusDays(7));
-            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
-            // since we added default values it should be TRIAL.
-        }
-        
-        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
-            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
-                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
-            }
-        } else {
-            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
-                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
-            }
-        }
-
-
-
         return invoiceRepository
                 .findByShopIdOrderByCreatedAtDesc(
                         shopId
@@ -304,33 +277,6 @@ public class InvoiceService {
 
         Long shopId =
                 shop.getId();
-
-        // -------------------------------------------------
-        // SUBSCRIPTION CHECK
-        // -------------------------------------------------
-        
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
-        
-        if (tier == null) {
-            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
-            shop.setSubscriptionTier(tier);
-            shop.setTrialEndsAt(now.plusDays(7));
-            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
-            // since we added default values it should be TRIAL.
-        }
-        
-        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
-            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
-                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
-            }
-        } else {
-            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
-                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
-            }
-        }
-
-
 
         Invoice_entity invoice =
                 invoiceRepository
@@ -365,28 +311,8 @@ public class InvoiceService {
         // -------------------------------------------------
         // SUBSCRIPTION CHECK
         // -------------------------------------------------
-        
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        com.example.Billing.shop.SubscriptionTier tier = shop.getSubscriptionTier();
-        
-        if (tier == null) {
-            tier = com.example.Billing.shop.SubscriptionTier.TRIAL;
-            shop.setSubscriptionTier(tier);
-            shop.setTrialEndsAt(now.plusDays(7));
-            // We won't save shop here to avoid circular dep, it's just a fallback in memory 
-            // since we added default values it should be TRIAL.
-        }
-        
-        if (tier == com.example.Billing.shop.SubscriptionTier.TRIAL) {
-            if (shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt())) {
-                throw new RuntimeException("Your 7-day trial has expired. Please upgrade to a paid plan (BASE, PRO, or ENTERPRISE) to continue creating invoices.");
-            }
-        } else {
-            if (shop.getSubscriptionEndsAt() != null && now.isAfter(shop.getSubscriptionEndsAt())) {
-                throw new RuntimeException("Your subscription has expired. Please renew your plan to continue.");
-            }
-        }
 
+        planLimitsService.assertEntitled(shop);
 
 
         Invoice_entity invoice =
@@ -508,7 +434,9 @@ public class InvoiceService {
 
         if (!shopContextResolver.resolveActiveShop(user).isActive()) {
 
-            throw new RuntimeException(
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "SHOP_INACTIVE",
                     "Shop is not active"
             );
         }

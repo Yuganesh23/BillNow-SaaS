@@ -77,7 +77,7 @@ public class PlanLimitsService {
                 users.countByShopIdAndActiveTrue(shop.getId()), shops.findByOwnerId(shop.getOwner().getId()).size());
     }
 
-    private void assertEntitled(Shop_entity shop) {
+    public void assertEntitled(Shop_entity shop) {
         LocalDateTime now = LocalDateTime.now();
         SubscriptionTier tier = shop.getSubscriptionTier() == null ? SubscriptionTier.TRIAL : shop.getSubscriptionTier();
         if (tier == SubscriptionTier.TRIAL && shop.getTrialEndsAt() != null && now.isAfter(shop.getTrialEndsAt()))
