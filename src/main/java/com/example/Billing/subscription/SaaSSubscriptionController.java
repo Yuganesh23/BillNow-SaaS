@@ -1,6 +1,7 @@
 package com.example.Billing.subscription;
 
 import com.example.Billing.auth.SecurityUtils;
+import com.example.Billing.subscription.dto.ChangePlanRequest_Dto;
 import com.example.Billing.subscription.dto.CreateSubscriptionRequest_Dto;
 import com.example.Billing.subscription.dto.SubscriptionResponse_Dto;
 import com.example.Billing.subscription.dto.VerifySubscriptionRequest_Dto;
@@ -117,6 +118,45 @@ public class SaaSSubscriptionController {
         return ResponseEntity.ok(
                 subscriptionService
                         .cancelSubscription(user)
+        );
+    }
+
+
+    // =========================================================
+    // CHANGE PLAN
+    // =========================================================
+
+    @PostMapping("/change-plan")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ResponseEntity<SubscriptionResponse_Dto>
+    changePlan(
+            @Valid
+            @RequestBody
+            ChangePlanRequest_Dto request
+    ) {
+
+        User_entity user =
+                securityUtils.getCurrentUser();
+
+        return ResponseEntity.ok(
+                subscriptionService.changePlan(
+                        user,
+                        request
+                )
+        );
+    }
+
+    @PostMapping("/change-plan/cancel")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ResponseEntity<SubscriptionResponse_Dto>
+    cancelPlanChange() {
+
+        User_entity user =
+                securityUtils.getCurrentUser();
+
+        return ResponseEntity.ok(
+                subscriptionService
+                        .cancelPlanChange(user)
         );
     }
 }

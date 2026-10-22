@@ -45,4 +45,8 @@ public class SubscriptionResponse_Dto {
     private LocalDateTime nextBillingDate;
 
     private boolean active;
+
+    private boolean cancelAtPeriodEnd;
+
+    private SaaSPlan pendingPlan;
 }

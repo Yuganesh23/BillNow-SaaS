@@ -87,7 +87,10 @@ public class PlanLimitsService {
     }
 
     private Limits limits(Shop_entity shop) {
-        SubscriptionTier tier = shop.getSubscriptionTier() == null ? SubscriptionTier.TRIAL : shop.getSubscriptionTier();
+        return limitsFor(shop.getSubscriptionTier() == null ? SubscriptionTier.TRIAL : shop.getSubscriptionTier());
+    }
+
+    public Limits limitsFor(SubscriptionTier tier) {
         return switch (tier) { case TRIAL -> trial; case BASE -> base; case PRO -> pro; case ENTERPRISE -> enterprise; };
     }
 

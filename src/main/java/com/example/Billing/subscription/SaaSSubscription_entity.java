@@ -86,6 +86,20 @@ public class SaaSSubscription_entity {
     private boolean active = false;
 
     /*
+     * Cancellation requested; access continues until endDate
+     */
+    @Column(name = "cancel_at_period_end", nullable = false)
+    @Builder.Default
+    private boolean cancelAtPeriodEnd = false;
+
+    /*
+     * Plan change sent to Razorpay but not yet confirmed by webhook
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pending_plan", length = 20)
+    private SaaSPlan pendingPlan;
+
+    /*
      * Razorpay payment ID of authorization payment
      */
     private String razorpayPaymentId;
