@@ -38,6 +38,8 @@ application-local.properties
 frontend/.env
 frontend/.env.local
 frontend/.vercel/
+frontend/.firebase/
+frontend/.firebaserc
 
 ### Codex workspace ###
 /outputs/

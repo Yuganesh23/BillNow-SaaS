@@ -1,0 +1,13 @@
+# Files uploaded by `gcloud run deploy --source .`; the API build needs only
+# pom.xml, src and the Dockerfile.
+.gcloudignore
+.git
+.github
+.idea
+.vscode
+frontend
+outputs
+work
+target
+*.log
+.env

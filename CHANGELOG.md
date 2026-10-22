@@ -16,9 +16,11 @@ All notable XenBill changes are recorded here. The project has not yet published
 - Professional XenBill landing page, SEO metadata, draft Privacy/Terms pages and security headers.
 - Authenticated OpenAPI contract and Swagger UI.
 - Subscription cancellation at period end, plan upgrades/downgrades, billing history and GST tax invoices for subscription payments.
+- Cloud Run + Firebase Hosting deployment (`docs/DEPLOY_GCP.md`, `frontend/firebase.json`) with an `AUTH_COOKIE_MODE=session` option for Firebase's `__session` cookie.
 
 ### Fixed
 
+- Flyway migrations never ran (Spring Boot 4 needs `spring-boot-starter-flyway`); production failed on a new database. Empty databases are now initialised from a V11 schema snapshot.
 - Cancelled subscriptions and failed renewals no longer lock shops out of their customers and invoices; lapsed shops keep read-only access.
 - Subscription and invoice-entitlement errors return specific 4xx codes instead of HTTP 500.
 
