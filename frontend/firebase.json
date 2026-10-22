@@ -5,7 +5,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "run": { "serviceId": "billnow-api", "region": "asia-south1" }
+        "run": { "serviceId": "xenbill", "region": "asia-southeast1" }
       },
       { "source": "**", "destination": "/index.html" }
     ],
