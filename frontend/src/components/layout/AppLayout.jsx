@@ -29,7 +29,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
     navigate('/login');
   };
 
-    const allNavItems = [
+  const allNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Invoices', path: '/invoices', icon: FileText },
     { name: 'Products', path: '/products', icon: Package },
@@ -72,6 +72,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
               <NavLink
                 key={item.name}
                 to={item.path}
+                onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center px-2 py-2 text-[14px] rounded-md ${
                     isActive
@@ -89,7 +90,10 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
 
         <div className="p-4 border-t border-slate-200">
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              setMobileOpen(false);
+              handleLogout();
+            }}
             className="flex items-center w-full px-2 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-900"
           >
             <LogOut className="w-5 h-5 mr-3" />
@@ -162,4 +166,3 @@ export const AppLayout = () => {
     </div>
   );
 };
-

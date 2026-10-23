@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInvoiceById } from '../api/invoiceApi';
 import { LoadingState } from '../components/common/States';
-import { ArrowLeft, Printer, Download, CreditCard, MessageCircle, Mail } from 'lucide-react';
+import { ArrowLeft, Printer, Download, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
-import { createPayment } from '../api/paymentApi';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
 
@@ -31,9 +30,7 @@ export default function InvoiceDetails() {
 
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
-
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -49,8 +46,8 @@ export default function InvoiceDetails() {
               .catch(err => console.log('No payment details found', err));
           });
         }
-      } catch (err) {
-        setError('Failed to load invoice');
+      } catch {
+        console.error('Failed to load invoice');
       } finally {
         setLoading(false);
       }
@@ -61,14 +58,14 @@ export default function InvoiceDetails() {
   if (loading) return <LoadingState message="Loading invoice..." />;
   if (!invoice) return <div className="p-8 text-red-500">Invoice not found.</div>;
 
-
   const invoiceShop = branches?.find(b => b.id === invoice?.shopId);
-  const shopDetails = invoiceShop || user;
+  const shopDetails = invoiceShop || user?.shop || user;
   const displayName = shopDetails?.invoiceName || shopDetails?.shopName || shopDetails?.name || 'BillNow';
   const displayAddress = shopDetails?.shopAddress || shopDetails?.address || '123 Business Avenue, Suite 100';
   const displayMobile = shopDetails?.shopMobileNumber || shopDetails?.mobileNumber || 'N/A';
   const displayEmail = shopDetails?.shopEmail || shopDetails?.email || 'contact@billnow.example.com';
-  const displayLogo = shopDetails?.logoBase64;
+  const displayLogo = shopDetails?.logoBase64 || branches?.[0]?.logoBase64;
+  const displayGstin = shopDetails?.gstin || user?.shop?.gstin || branches?.[0]?.gstin;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
@@ -90,7 +87,7 @@ export default function InvoiceDetails() {
           </span>
         </div>
         <div className="flex gap-3">
-          <button className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
+          <button onClick={() => window.print()} className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
             <Printer className="w-4 h-4 mr-2" />
             Print
           </button>
@@ -98,12 +95,6 @@ export default function InvoiceDetails() {
             <Download className="w-4 h-4 mr-2" />
             PDF
           </button>
-          {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
-            <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-              <CreditCard className="w-4 h-4 mr-2" />
-              Record Payment
-            </button>
-          )}
         </div>
       </div>
 
@@ -111,7 +102,7 @@ export default function InvoiceDetails() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-200 pb-4 items-start">
             <div className="flex justify-start">
               {displayLogo ? (
-                <img src={displayLogo} alt="Shop Logo" className="h-16 w-auto object-contain" />
+                <img src={displayLogo} alt="Shop Logo" className="h-16 w-auto object-contain rounded" />
               ) : (
                 <div className="h-16 w-16 bg-slate-100 flex items-center justify-center rounded-lg text-slate-400 text-sm">Logo</div>
               )}
@@ -123,6 +114,7 @@ export default function InvoiceDetails() {
                 {displayAddress}<br/>
                 Mobile: {displayMobile}<br/>
                 {displayEmail}
+                {displayGstin && <><br/><strong className="text-slate-700">GSTIN: {displayGstin}</strong></>}
               </p>
             </div>
             
@@ -140,9 +132,8 @@ export default function InvoiceDetails() {
               </div>
             </div>
           </div>
-        </div>
 
-                <div className="py-4">
+        <div className="py-4 overflow-x-auto">
           <table className="min-w-full">
             <thead className="border-b border-slate-200">
               <tr>
@@ -159,8 +150,8 @@ export default function InvoiceDetails() {
                   <td className="py-4 text-sm text-slate-900">{item.productName || `Product ID: ${item.productId}`}</td>
                   <td className="py-4 text-sm text-slate-500 text-center">{item.hsnCode || '-'}</td>
                   <td className="py-4 text-sm text-slate-500 text-center">{item.quantity}</td>
-                  <td className="py-4 text-sm text-slate-500 text-right">₹{parseFloat(item.unitPrice || 0).toLocaleString()}</td>
-                  <td className="py-4 text-sm text-slate-900 text-right">₹{parseFloat(item.totalPrice || 0).toLocaleString()}</td>
+                  <td className="py-4 text-sm text-slate-500 text-right">₹{parseFloat(item.unitPrice).toLocaleString()}</td>
+                  <td className="py-4 text-sm font-medium text-slate-900 text-right">₹{parseFloat(item.totalPrice).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -211,10 +202,6 @@ export default function InvoiceDetails() {
           <p className="mt-1">We appreciate your business.</p>
         </div>
       </div>
-
+    </div>
   );
 }
-
-
-
-
