@@ -134,46 +134,48 @@ export default function Customers() {
         />
       ) : (
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">WhatsApp</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Address</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link to={`/customers/${customer.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900">{customer.name}</Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    {customer.whatsappNumber ? (
-                      <div className="flex items-center">
-                        <Phone className="w-4 h-4 mr-1.5 text-slate-400" />
-                        <span>{customer.whatsappNumber}</span>
-                        <span className="mx-2 text-slate-300">|</span>
-                        <a href={`https://wa.me/91${customer.whatsappNumber.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-600 hover:text-green-700 font-medium">WhatsApp</a>
-                      </div>
-                    ) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{customer.email || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 truncate max-w-[200px]" title={customer.address || ''}>{customer.address || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => handleOpenModal(customer)} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(customer.id)} className="text-red-600 hover:text-red-900">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">WhatsApp</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Address</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredCustomers.map((customer) => (
+                  <tr key={customer.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Link to={`/customers/${customer.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900">{customer.name}</Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      {customer.whatsappNumber ? (
+                        <div className="flex items-center">
+                          <Phone className="w-4 h-4 mr-1.5 text-slate-400" />
+                          <span>{customer.whatsappNumber}</span>
+                          <span className="mx-2 text-slate-300">|</span>
+                          <a href={`https://wa.me/91${customer.whatsappNumber.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-600 hover:text-green-700 font-medium">WhatsApp</a>
+                        </div>
+                      ) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{customer.email || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 truncate max-w-[200px]" title={customer.address || ''}>{customer.address || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button onClick={() => handleOpenModal(customer)} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(customer.id)} className="text-red-600 hover:text-red-900">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getPurchases } from '../api/purchaseApi';
 import { LoadingState } from '../components/common/States';
 import { Plus, Search, Eye } from 'lucide-react';
@@ -61,67 +61,69 @@ export default function Purchases() {
       </div>
 
       <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Purchase No.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Supplier</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Products</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Paid</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Balance</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
-            {filteredPurchases.map((purchase) => (
-              <tr key={purchase.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                    {purchase.purchaseNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <Link to={`/suppliers/${purchase.supplierId}`} className="text-indigo-600 hover:underline">{purchase.supplierName}</Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    {format(new Date(purchase.createdAt), 'MMM dd, yyyy, h:mm a')}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={purchase.items?.map(i => i.productName).join(', ')}>
-                    {purchase.items?.map(i => i.productName).join(', ') || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900 font-medium">
-                    ₹{parseFloat(purchase.grandTotal || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-medium">
-                    ₹{parseFloat(purchase.amountPaid || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600 font-medium">
-                    ₹{parseFloat((purchase.grandTotal || 0) - (purchase.amountPaid || 0)).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 text-xs font-semibold leading-5 rounded-full ${
-                      purchase.status === 'PAID' ? 'bg-green-100 text-green-800' : 
-                      purchase.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 
-                      'bg-slate-100 text-slate-800'
-                    }`}>
-                      {purchase.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link to={`/purchases/${purchase.id}`} className="text-indigo-600 hover:text-indigo-900">
-                      <Eye className="w-4 h-4 ml-auto" />
-                    </Link>
-                  </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Purchase No.</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Products</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Paid</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
-            ))}
-            {filteredPurchases.length === 0 && (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-sm text-slate-500">No purchases found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
+              {filteredPurchases.map((purchase) => (
+                <tr key={purchase.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                      {purchase.purchaseNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <Link to={`/suppliers/${purchase.supplierId}`} className="text-indigo-600 hover:underline">{purchase.supplierName}</Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      {format(new Date(purchase.createdAt), 'MMM dd, yyyy, h:mm a')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={purchase.items?.map(i => i.productName).join(', ')}>
+                      {purchase.items?.map(i => i.productName).join(', ') || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900 font-medium">
+                      ₹{parseFloat(purchase.grandTotal || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-medium">
+                      ₹{parseFloat(purchase.amountPaid || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600 font-medium">
+                      ₹{parseFloat((purchase.grandTotal || 0) - (purchase.amountPaid || 0)).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 text-xs font-semibold leading-5 rounded-full ${
+                        purchase.status === 'PAID' ? 'bg-green-100 text-green-800' : 
+                        purchase.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 
+                        'bg-slate-100 text-slate-800'
+                      }`}>
+                        {purchase.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link to={`/purchases/${purchase.id}`} className="text-indigo-600 hover:text-indigo-900">
+                        <Eye className="w-4 h-4 ml-auto" />
+                      </Link>
+                    </td>
+                  </tr>
+              ))}
+              {filteredPurchases.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-slate-500">No purchases found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

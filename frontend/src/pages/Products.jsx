@@ -217,7 +217,8 @@ export default function Products() {
         <LoadingState />
       ) : (
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-slate-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Product</th>
@@ -264,7 +265,8 @@ export default function Products() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 

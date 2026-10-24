@@ -124,62 +124,64 @@ export default function Billers() {
         />
       ) : (
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Staff Details</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Performance</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {filteredBillers.map((biller) => (
-                <tr key={biller.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-slate-900 flex items-center">
-                      {biller.name}
-                      {biller.role === 'SHOP_OWNER' && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Owner</span>}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <div>{biller.email}</div>
-                    {biller.mobileNumber && <div className="text-xs text-slate-400">{biller.mobileNumber}</div>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                    <div className="flex items-center space-x-3">
-                      <div><span className="font-medium text-slate-500 text-xs mr-1">Sales:</span> ₹{biller.totalSales ? parseFloat(biller.totalSales).toLocaleString() : '0'}</div>
-                      <div>
-                        <span className="font-medium text-slate-500 text-xs mr-1">Invoices:</span> 
-                        <Link to={`/invoices?billerId=${biller.id}`} className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-indigo-100 bg-indigo-600 rounded-full hover:bg-indigo-700 transition-colors">
-                          {biller.totalInvoices || 0}
-                        </Link>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${biller.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {biller.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {biller.active && biller.role !== 'SHOP_OWNER' && (
-                      <>
-                      <button onClick={() => handleOpenModal(biller)} className="text-indigo-600 hover:text-indigo-900 font-medium text-[13px]">
-                          Edit
-                        </button>
-                        <span className="mx-2 text-slate-300">&middot;</span>
-                        <button onClick={() => handleDeactivate(biller.id)} className="text-red-600 hover:text-red-900 font-medium text-[13px]">
-                          Disable
-                        </button>
-                      </>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Staff Details</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Performance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredBillers.map((biller) => (
+                  <tr key={biller.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-slate-900 flex items-center">
+                        {biller.name}
+                        {biller.role === 'SHOP_OWNER' && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Owner</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <div>{biller.email}</div>
+                      {biller.mobileNumber && <div className="text-xs text-slate-400">{biller.mobileNumber}</div>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <div className="flex items-center space-x-3">
+                        <div><span className="font-medium text-slate-500 text-xs mr-1">Sales:</span> ₹{biller.totalSales ? parseFloat(biller.totalSales).toLocaleString() : '0'}</div>
+                        <div>
+                          <span className="font-medium text-slate-500 text-xs mr-1">Invoices:</span> 
+                          <Link to={`/invoices?billerId=${biller.id}`} className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-indigo-100 bg-indigo-600 rounded-full hover:bg-indigo-700 transition-colors">
+                            {biller.totalInvoices || 0}
+                          </Link>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${biller.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {biller.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {biller.active && biller.role !== 'SHOP_OWNER' && (
+                        <>
+                        <button onClick={() => handleOpenModal(biller)} className="text-indigo-600 hover:text-indigo-900 font-medium text-[13px]">
+                            Edit
+                          </button>
+                          <span className="mx-2 text-slate-300">&middot;</span>
+                          <button onClick={() => handleDeactivate(biller.id)} className="text-red-600 hover:text-red-900 font-medium text-[13px]">
+                            Disable
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getPurchaseById, recordPurchasePayment } from '../api/purchaseApi';
 import { LoadingState } from '../components/common/States';
@@ -61,9 +61,9 @@ export default function PurchaseDetails() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         
-        <div className="flex items-center">
+        <div className="flex flex-wrap items-center">
           <Link to="/purchases" className="mr-4 text-slate-400 hover:text-slate-600">
             <ArrowLeft className="w-6 h-6" />
           </Link>
@@ -86,8 +86,8 @@ export default function PurchaseDetails() {
 
       </div>
 
-      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-8 mb-6">
-        <div className="grid grid-cols-2 gap-8 border-b border-slate-200 pb-6 mb-6">
+      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-4 sm:p-8 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 border-b border-slate-200 pb-6 mb-6">
           <div>
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-1">Supplier</h3>
             <Link to={`/suppliers/${purchase.supplierId}`} className="text-lg font-bold text-indigo-600 hover:underline block">
@@ -97,43 +97,45 @@ export default function PurchaseDetails() {
                <div className="text-sm text-slate-500 mt-1">GSTIN: {purchase.supplierGstin}</div>
             )}
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-1">Purchase Details</h3>
             <p className="text-sm text-slate-900"><span className="font-medium">Date:</span> {format(new Date(purchase.createdAt), 'MMM dd, yyyy, h:mm a')}</p>
             <p className="text-sm text-slate-900"><span className="font-medium">Received By:</span> {shopName}</p>
           </div>
         </div>
 
-        <table className="min-w-full mb-8">
-          <thead className="border-b border-slate-200">
-            <tr>
-              <th className="py-3 text-left text-xs font-medium text-slate-500 uppercase">Product</th>
-                <th className="py-3 text-center text-xs font-medium text-slate-500 uppercase">HSN</th>
-                <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Qty</th>
-              <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Purchase Price</th>
-              <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {purchase.items?.map((item) => (
-              <tr key={item.id}>
-                <td className="py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <PackagePlus className="w-5 h-5 mr-3 text-indigo-400" />
-                      <div>
-                        <div className="text-[15px] font-semibold text-slate-900">{item.productName}</div>
-                        {item.sku && <div className="text-[13px] text-slate-500 mt-0.5">SKU: {item.sku}</div>}
-                      </div>
-                    </div>
-                  </td>
-                <td className="py-4 text-sm text-slate-500 text-center">{item.hsnCode || '-'}</td>
-                  <td className="py-4 text-sm text-slate-500 text-right">{item.quantity}</td>
-                <td className="py-4 text-sm text-slate-500 text-right">₹{parseFloat(item.purchasePrice || 0).toLocaleString()}</td>
-                <td className="py-4 text-sm text-slate-900 text-right">₹{parseFloat(item.totalPrice || 0).toLocaleString()}</td>
+        <div className="overflow-x-auto mb-8">
+          <table className="min-w-full">
+            <thead className="border-b border-slate-200">
+              <tr>
+                <th className="py-3 text-left text-xs font-medium text-slate-500 uppercase">Product</th>
+                  <th className="py-3 text-center text-xs font-medium text-slate-500 uppercase">HSN</th>
+                  <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Qty</th>
+                <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Purchase Price</th>
+                <th className="py-3 text-right text-xs font-medium text-slate-500 uppercase">Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {purchase.items?.map((item) => (
+                <tr key={item.id}>
+                  <td className="py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <PackagePlus className="w-5 h-5 mr-3 text-indigo-400" />
+                        <div>
+                          <div className="text-[15px] font-semibold text-slate-900">{item.productName}</div>
+                          {item.sku && <div className="text-[13px] text-slate-500 mt-0.5">SKU: {item.sku}</div>}
+                        </div>
+                      </div>
+                    </td>
+                  <td className="py-4 text-sm text-slate-500 text-center">{item.hsnCode || '-'}</td>
+                    <td className="py-4 text-sm text-slate-500 text-right">{item.quantity}</td>
+                  <td className="py-4 text-sm text-slate-500 text-right">₹{parseFloat(item.purchasePrice || 0).toLocaleString()}</td>
+                  <td className="py-4 text-sm text-slate-900 text-right">₹{parseFloat(item.totalPrice || 0).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex justify-end pt-6 border-t border-slate-200">
           <div className="w-64 space-y-3">

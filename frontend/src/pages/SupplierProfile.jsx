@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getSupplierById, getSupplierLedger, recordSupplierPayment, deleteSupplier, updateSupplier } from '../api/supplierApi';
 import { getPurchases } from '../api/purchaseApi';
@@ -94,14 +94,14 @@ export default function SupplierProfile() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center">
           <Link to="/suppliers" className="mr-4 text-slate-400 hover:text-slate-600">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">{supplier.businessName}</h1>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
             <button onClick={handleEditOpen} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
               <Edit2 className="w-4 h-4 mr-2" />
               Edit
@@ -158,7 +158,8 @@ export default function SupplierProfile() {
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
           <h2 className="text-lg font-medium text-slate-900">Supplier Ledger</h2>
         </div>
-        <table className="min-w-full divide-y divide-slate-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-white">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
@@ -199,6 +200,7 @@ export default function SupplierProfile() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
     

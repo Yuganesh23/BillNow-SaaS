@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSuppliers } from '../api/supplierApi';
 import { LoadingState } from '../components/common/States';
 import { Plus, Search, Mail, Phone, ExternalLink } from 'lucide-react';
@@ -60,7 +60,8 @@ export default function Suppliers() {
       </div>
 
       <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Supplier</th>
@@ -117,6 +118,7 @@ export default function Suppliers() {
             )))}
             </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

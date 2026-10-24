@@ -112,12 +112,12 @@ const BranchSelector = () => {
   if (!branches || branches.length === 0) return null;
   
   return (
-    <div className="flex items-center mr-6 border-r border-slate-200 pr-6">
-      <Building2 className="w-4 h-4 text-slate-500 mr-2" />
+    <div className="flex items-center mr-2 sm:mr-6 border-r border-slate-200 pr-2 sm:pr-6 max-w-[140px] sm:max-w-none">
+      <Building2 className="w-4 h-4 text-slate-500 mr-1 sm:mr-2 flex-shrink-0" />
       <select 
         value={activeBranchId || ''} 
         onChange={(e) => changeBranch(e.target.value)}
-        className="text-sm font-medium text-slate-700 bg-transparent border-none focus:ring-0 cursor-pointer"
+        className="text-xs sm:text-sm font-medium text-slate-700 bg-transparent border-none focus:ring-0 cursor-pointer truncate"
       >
         <option value="">All Branches</option>
         {branches.map(b => (
@@ -145,7 +145,7 @@ export const AppLayout = () => {
             <Menu size={24} />
           </button>
           
-          <div className="flex-1 px-4 flex justify-end">
+          <div className="flex-1 px-2 sm:px-4 flex justify-end">
             {user?.role === 'SHOP_OWNER' && (
               <BranchSelector />
             )}
