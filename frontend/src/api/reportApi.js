@@ -1,4 +1,4 @@
-﻿import axiosClient from './axiosClient';
+import axiosClient from './axiosClient';
 
 const isMock = import.meta.env.VITE_USE_MOCK_API === 'true';
 
@@ -11,8 +11,7 @@ const getDefaultDates = (startDate, endDate) => {
   };
 
   if (!startDate) {
-    const today = new Date();
-    startDate = getLocalDateString(new Date(today.getFullYear(), 0, 1));
+    startDate = '2020-01-01';
   }
   if (!endDate) {
     endDate = getLocalDateString(new Date());

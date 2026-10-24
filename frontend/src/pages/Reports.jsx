@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, Tag, CreditCard, Smartphone, Banknote, ArrowRight, X } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, Tag, CreditCard, Smartphone, Banknote, ArrowRight, X, Calendar } from 'lucide-react';
 import { getSalesReport, getProductsReport, getCustomersReport, getPaymentsReport, getNewCustomersReport } from '../api/reportApi';
 
 export default function Reports() {
@@ -9,8 +9,26 @@ export default function Reports() {
   const [paymentsReport, setPaymentsReport] = useState(null);
   const [newCustomersReport, setNewCustomersReport] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState("ALL");
   const [activeModal, setActiveModal] = useState(null);
+
+  const formatDateStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const today = new Date();
+  const todayStr = formatDateStr(today);
+  const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgoStr = formatDateStr(sevenDaysAgo);
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  const [timeFilter, setTimeFilter] = useState("ALL");
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [weekFrom, setWeekFrom] = useState(sevenDaysAgoStr);
+  const [weekTo, setWeekTo] = useState(todayStr);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -18,19 +36,23 @@ export default function Reports() {
       try {
         let startDate = null;
         let endDate = null;
-        const today = new Date();
         
         if (timeFilter === 'DAILY') {
-          startDate = today.toISOString().split('T')[0];
-          endDate = startDate;
+          startDate = selectedDate || todayStr;
+          endDate = selectedDate || todayStr;
         } else if (timeFilter === 'WEEKLY') {
-          const firstDay = new Date(today.setDate(today.getDate() - today.getDay()));
-          startDate = firstDay.toISOString().split('T')[0];
-          const lastDay = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-          endDate = lastDay.toISOString().split('T')[0];
+          startDate = weekFrom || sevenDaysAgoStr;
+          endDate = weekTo || todayStr;
         } else if (timeFilter === 'MONTHLY') {
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-          endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+          const [year, month] = (selectedMonth || currentMonthStr).split('-').map(Number);
+          const firstDay = new Date(year, month - 1, 1);
+          const lastDay = new Date(year, month, 0);
+          startDate = formatDateStr(firstDay);
+          endDate = formatDateStr(lastDay);
+        } else {
+          // ALL time
+          startDate = '2020-01-01';
+          endDate = todayStr;
         }
 
         const [sales, products, customers] = await Promise.all([
@@ -66,7 +88,7 @@ export default function Reports() {
       }
     };
     fetchReports();
-  }, [timeFilter]);
+  }, [timeFilter, selectedDate, weekFrom, weekTo, selectedMonth]);
 
   if (loading && !salesReport) {
     return (
@@ -96,40 +118,93 @@ export default function Reports() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Reports & Insights</h1>
-          <p className="mt-2 text-sm text-slate-700">Comprehensive overview of your business performance.</p>
+          <p className="mt-1 text-sm text-slate-600">Comprehensive overview of your business performance.</p>
         </div>
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-          {['ALL', 'DAILY', 'WEEKLY', 'MONTHLY'].map(filter => (
-            <button
-              key={filter}
-              onClick={() => setTimeFilter(filter)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${timeFilter === filter ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              {filter.charAt(0) + filter.slice(1).toLowerCase()}
-            </button>
-          ))}
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Time Filter Pills */}
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            {['ALL', 'DAILY', 'WEEKLY', 'MONTHLY'].map(filter => (
+              <button
+                key={filter}
+                onClick={() => setTimeFilter(filter)}
+                className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${timeFilter === filter ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                {filter.charAt(0) + filter.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+
+          {/* Daily Date Picker */}
+          {timeFilter === 'DAILY' && (
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm">
+              <Calendar className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+              <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Date:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                max={todayStr}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-xs sm:text-sm font-medium text-slate-800 bg-transparent border-none focus:ring-0 p-0 cursor-pointer"
+              />
+            </div>
+          )}
+
+          {/* Weekly Date Range Picker */}
+          {timeFilter === 'WEEKLY' && (
+            <div className="flex flex-wrap items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm">
+              <Calendar className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-600">From:</span>
+                <input
+                  type="date"
+                  value={weekFrom}
+                  max={weekTo || todayStr}
+                  onChange={(e) => setWeekFrom(e.target.value)}
+                  className="text-xs sm:text-sm font-medium text-slate-800 bg-transparent border-none focus:ring-0 p-0 cursor-pointer"
+                />
+              </div>
+              <span className="text-slate-400">→</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-600">To:</span>
+                <input
+                  type="date"
+                  value={weekTo}
+                  min={weekFrom}
+                  max={todayStr}
+                  onChange={(e) => setWeekTo(e.target.value)}
+                  className="text-xs sm:text-sm font-medium text-slate-800 bg-transparent border-none focus:ring-0 p-0 cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Monthly Month Picker */}
+          {timeFilter === 'MONTHLY' && (
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm">
+              <Calendar className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+              <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Month:</span>
+              <input
+                type="month"
+                value={selectedMonth}
+                max={todayStr.slice(0, 7)}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="text-xs sm:text-sm font-medium text-slate-800 bg-transparent border-none focus:ring-0 p-0 cursor-pointer"
+              />
+            </div>
+          )}
+
+          {loading && (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
+          )}
         </div>
       </div>
-      
-      {/* Highest Revenue Banner */}
-      {salesReport.highestRevenueDate && (
-        <div className="bg-emerald-50 rounded-lg p-6 mb-8 border border-emerald-100 flex justify-between items-center">
-          <div>
-            <p className="text-emerald-800 text-sm font-medium mb-1">Best Sales Day</p>
-            <p className="text-emerald-600 text-xs">{salesReport.highestRevenueDay || '-'}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-bold text-emerald-700">₹{parseFloat(salesReport.highestRevenueAmount || 0).toLocaleString()}</p>
-            
-          </div>
-        </div>
-      )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8 transition-opacity ${loading ? 'opacity-60' : ''}`}>
         <div className="bg-white p-6 shadow-sm ring-1 ring-slate-200 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
@@ -137,7 +212,7 @@ export default function Reports() {
             </div>
             <div className="ml-5 w-0 flex-1">
               <dt className="text-sm font-medium text-slate-500 truncate">Total Sales</dt>
-              <dd className="text-2xl font-bold text-slate-900">₹{parseFloat(salesReport?.totalRevenue || 0).toLocaleString()}</dd>
+              <dd className="text-2xl font-bold text-slate-900">₹{parseFloat(salesReport?.totalSales ?? salesReport?.totalRevenue ?? 0).toLocaleString()}</dd>
             </div>
           </div>
         </div>
@@ -170,7 +245,7 @@ export default function Reports() {
             </div>
             <div className="ml-5 w-0 flex-1">
               <dt className="text-sm font-medium text-slate-500 truncate">Net Profit</dt>
-              <dd className="text-2xl font-bold text-slate-900">₹{parseFloat((salesReport?.totalRevenue || 0) * 0.4).toLocaleString()}</dd>
+              <dd className="text-2xl font-bold text-slate-900">₹{parseFloat(salesReport?.totalProfit ?? ((salesReport?.totalSales || 0) * 0.4)).toLocaleString()}</dd>
             </div>
           </div>
         </div>
