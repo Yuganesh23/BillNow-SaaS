@@ -1,6 +1,6 @@
-# BillNow Frontend
+# XenBill Frontend
 
-This is the React frontend prototype V1 for the BillNow Spring Boot backend.
+This is the React frontend prototype V1 for the XenBill Spring Boot backend.
 It is built with React, Vite, Tailwind CSS, React Router, and Axios.
 
 ## Project Structure
@@ -63,7 +63,7 @@ VITE_USE_MOCK_API=false
 
 ## Backend Dependency
 
-This frontend is designed to consume the BillNow Spring Boot backend.
+This frontend is designed to consume the XenBill Spring Boot backend.
 Ensure the backend is running on `http://localhost:8080` (or update `VITE_API_BASE_URL`) with CORS configured to allow the frontend origin.
 
 ## Known Limitations & V2 Recommendations

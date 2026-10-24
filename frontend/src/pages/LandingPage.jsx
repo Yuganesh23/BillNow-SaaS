@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 
 export default function LandingPage() {
@@ -9,8 +9,8 @@ export default function LandingPage() {
         <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
           <div className="flex lg:flex-1">
             <a href="#" className="-m-1.5 p-1.5">
-              <span className="sr-only">BillNow</span>
-              <span className="text-2xl font-bold text-indigo-600">BillNow</span>
+              <span className="sr-only">XenBill</span>
+              <span className="text-2xl font-bold text-indigo-600">XenBill</span>
             </a>
           </div>
           <div className="flex lg:hidden">

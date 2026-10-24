@@ -60,10 +60,10 @@ export default function InvoiceDetails() {
 
   const invoiceShop = branches?.find(b => b.id === invoice?.shopId);
   const shopDetails = invoiceShop || user?.shop || user;
-  const displayName = shopDetails?.invoiceName || shopDetails?.shopName || shopDetails?.name || 'BillNow';
+  const displayName = shopDetails?.invoiceName || shopDetails?.shopName || shopDetails?.name || 'XenBill';
   const displayAddress = shopDetails?.shopAddress || shopDetails?.address || '123 Business Avenue, Suite 100';
   const displayMobile = shopDetails?.shopMobileNumber || shopDetails?.mobileNumber || 'N/A';
-  const displayEmail = shopDetails?.shopEmail || shopDetails?.email || 'contact@billnow.example.com';
+  const displayEmail = shopDetails?.shopEmail || shopDetails?.email || 'contact@xenbill.com';
   const displayLogo = shopDetails?.logoBase64 || branches?.[0]?.logoBase64;
   const displayGstin = shopDetails?.gstin || user?.shop?.gstin || branches?.[0]?.gstin;
 

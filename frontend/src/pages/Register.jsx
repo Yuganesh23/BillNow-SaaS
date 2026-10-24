@@ -51,16 +51,16 @@ export default function Register() {
         <div>
           <div className="flex items-center gap-3 mb-16">
             <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center transform rotate-3 shadow-lg shadow-green-500/20">
-              <span className="text-white font-bold text-2xl transform -rotate-3">B</span>
+              <span className="text-white font-bold text-2xl transform -rotate-3">X</span>
             </div>
-            <span className="text-3xl font-bold tracking-tight">BillNow</span>
+            <span className="text-3xl font-bold tracking-tight">XenBill</span>
           </div>
           
           <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
             Transform how you manage your retail business.
           </h1>
           <p className="text-lg text-slate-300 mb-12 max-w-lg leading-relaxed">
-            Join thousands of modern store owners who use BillNow to streamline their point of sale, track multi-branch inventory, and automate supplier ledgers effortlessly.
+            Join thousands of modern store owners who use XenBill to streamline their point of sale, track multi-branch inventory, and automate supplier ledgers effortlessly.
           </p>
           
           <div className="space-y-8">
@@ -119,9 +119,9 @@ export default function Register() {
           {/* Mobile Header (Hidden on Desktop) */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center transform rotate-3">
-              <span className="text-white font-bold text-xl transform -rotate-3">B</span>
+              <span className="text-white font-bold text-xl transform -rotate-3">X</span>
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">BillNow</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-900">XenBill</span>
           </div>
 
           <div>

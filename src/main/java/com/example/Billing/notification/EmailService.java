@@ -17,10 +17,10 @@ public class EmailService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             // Need a default fallback if config is missing in properties
-            message.setFrom("noreply@billnow.com");
+            message.setFrom("noreply@xenbill.com");
             message.setTo(toEmail);
-            message.setSubject("Your BillNow Verification Code");
-            message.setText("Hello,\n\nYour OTP code is: " + otp + "\n\nThis code is valid for 5 minutes.\n\nThank you,\nBillNow Team");
+            message.setSubject("Your XenBill Verification Code");
+            message.setText("Hello,\n\nYour OTP code is: " + otp + "\n\nThis code is valid for 5 minutes.\n\nThank you,\nXenBill Team");
 
             mailSender.send(message);
             log.info("OTP Email successfully sent to {}", toEmail);
