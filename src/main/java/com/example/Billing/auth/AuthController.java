@@ -61,37 +61,47 @@ public class AuthController {
     // =====================================================
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse_Dto> login(
+    public ResponseEntity<?> login(
             @Valid
             @RequestBody
             LoginRequest_Dto request
     ) {
+        try {
+            AuthResponse_Dto response =
+                    authService.login(
+                            request
+                    );
 
-        AuthResponse_Dto response =
-                authService.login(
-                        request
-                );
+            ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(24 * 60 * 60) // 24 hours (1 day)
+                    .sameSite("Lax")
+                    .build();
 
-        ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(24 * 60 * 60) // 24 hours (1 day)
-                .sameSite("Lax")
-                .build();
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(24 * 60 * 60) // 24 hours (1 day)
+                    .sameSite("Lax")
+                    .build();
 
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(24 * 60 * 60) // 24 hours (1 day)
-                .sameSite("Lax")
-                .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                    .body(response);
+        } catch (RuntimeException e) {
+            System.err.println("Login failed for " + request.getEmail() + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(java.util.Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid email or password"));
+        } catch (Exception e) {
+            System.err.println("Unexpected login error for " + request.getEmail() + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "An unexpected error occurred during login"));
+        }
     }
 
     

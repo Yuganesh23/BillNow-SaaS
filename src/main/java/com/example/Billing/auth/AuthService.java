@@ -182,6 +182,7 @@ public class AuthService {
     // LOGIN
     // =====================================================
 
+    @Transactional
     public AuthResponse_Dto login(
             LoginRequest_Dto request
     ) {
