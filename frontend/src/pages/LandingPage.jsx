@@ -119,6 +119,27 @@ export default function LandingPage() {
           </div>
         </div>
       </main>
+
+      {/* Compliance Footer for Razorpay Approval */}
+      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+              <span className="text-2xl font-bold text-white tracking-tight">XenBill</span>
+              <p className="text-sm mt-1 text-slate-400">The Fastest Billing & Inventory SaaS for Retail & Wholesale</p>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
+              <Link to="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link>
+              <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link to="/refund" className="hover:text-white transition-colors">Cancellation & Refund</Link>
+              <Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-slate-800 text-xs text-center text-slate-500">
+            © {new Date().getFullYear()} XenBill Technologies. All rights reserved. Secured by Razorpay.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
@@ -28,6 +28,7 @@ import Settings from './pages/Settings';
 import Subscription from './pages/Subscription';
 import Register from './pages/Register';
 import Billers from './pages/Billers';
+import LegalPolicies from './pages/LegalPolicies';
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -50,6 +51,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/terms" element={<LegalPolicies />} />
+          <Route path="/privacy" element={<LegalPolicies />} />
+          <Route path="/refund" element={<LegalPolicies />} />
+          <Route path="/contact" element={<LegalPolicies />} />
+          <Route path="/legal" element={<LegalPolicies />} />
           
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
