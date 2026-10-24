@@ -854,7 +854,8 @@ public class SaaSSubscriptionService {
         Shop_entity shop = shopRepository.findById(request.getBranchId())
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
 
-        if (!shop.getOwner().getId().equals(user.getId())) {
+        if (shop.getOwner() != null && !shop.getOwner().getId().equals(user.getId())) {
+            log.warn("User {} is not the owner of shop {}", user.getId(), shop.getId());
             throw new RuntimeException("Unauthorized: you do not own this shop");
         }
 
@@ -880,7 +881,7 @@ public class SaaSSubscriptionService {
             JSONObject notes = new JSONObject();
             notes.put("branchId", String.valueOf(shop.getId()));
             notes.put("tier", request.getTier());
-            notes.put("ownerEmail", user.getEmail());
+            notes.put("ownerEmail", user.getEmail() != null ? user.getEmail() : "");
             orderRequest.put("notes", notes);
 
             com.razorpay.Order order = razorpayClient.orders.create(orderRequest);
@@ -917,7 +918,8 @@ public class SaaSSubscriptionService {
         Shop_entity shop = shopRepository.findById(request.getBranchId())
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
 
-        if (!shop.getOwner().getId().equals(user.getId())) {
+        if (shop.getOwner() != null && !shop.getOwner().getId().equals(user.getId())) {
+            log.warn("User {} is not the owner of shop {}", user.getId(), shop.getId());
             throw new RuntimeException("Unauthorized: you do not own this shop");
         }
 

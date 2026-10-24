@@ -107,7 +107,10 @@ export default function Subscription() {
         
     } catch (e) {
         console.error("Order creation failed:", e);
-        const errorMsg = e.response?.data?.message || e.message || "Failed to initiate payment.";
+        const errorMsg = e.response?.data?.message 
+            || e.response?.data?.error 
+            || (e.response?.status === 500 ? "Backend service error (500). Please ensure Cloud Run backend is deployed." : e.message) 
+            || "Failed to initiate payment.";
         alert(errorMsg);
         setUpgradingTier(null);
     }

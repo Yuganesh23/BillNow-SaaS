@@ -12,6 +12,7 @@ import com.example.Billing.auth.User_entity;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/subscription")
 @RequiredArgsConstructor
+@Slf4j
 public class SaaSSubscriptionController {
 
     private final SaaSSubscriptionService subscriptionService;
@@ -146,5 +148,12 @@ public class SaaSSubscriptionController {
                 subscriptionService
                         .cancelSubscription(user)
         );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleException(Exception e) {
+        log.error("Subscription controller error: {}", e.getMessage(), e);
+        String msg = e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Subscription request failed";
+        return ResponseEntity.badRequest().body(Map.of("message", msg));
     }
 }
