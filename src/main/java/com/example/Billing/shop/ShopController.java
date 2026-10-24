@@ -38,13 +38,14 @@ public class ShopController {
 
         Shop_entity newShop = Shop_entity.builder()
                 .name(request.getName())
-                .invoiceName(request.getInvoiceName())
+                .invoiceName(request.getInvoiceName() != null && !request.getInvoiceName().isBlank() ? request.getInvoiceName() : request.getName())
                 .email(request.getEmail())
                 .mobileNumber(request.getMobileNumber())
                 .gstin(request.getGstin())
                 .legalName(request.getLegalName())
                 .state(request.getState())
                 .address(request.getAddress())
+                .logoBase64(request.getLogoBase64())
                 .owner(owner)
                 .active(true)
                 .build();
@@ -159,4 +160,5 @@ class ShopCreateRequest {
     private String legalName;
     private String state;
     private String address;
+    private String logoBase64;
 }

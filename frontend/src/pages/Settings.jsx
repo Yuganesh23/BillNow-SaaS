@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
-import { Building2, Plus, Mail, Phone, User, Edit2, Trash2 } from 'lucide-react';
+import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MapPin } from 'lucide-react';
 
 export default function Settings() {
   const { user, logout } = useAuth();
@@ -209,33 +209,48 @@ export default function Settings() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
                       {shop.logoBase64 ? (
-                        <img src={shop.logoBase64} alt={shop.name} className="w-10 h-10 rounded-md object-contain border border-slate-200 mr-3 bg-white" />
+                        <img src={shop.logoBase64} alt={shop.name} className="w-12 h-12 rounded-md object-contain border border-slate-200 mr-3 bg-white p-1" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                          <Building2 className="w-5 h-5" />
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
+                          <Building2 className="w-6 h-6" />
                         </div>
                       )}
-                      <h2 className="text-lg font-medium text-slate-900">{shop.name}</h2>
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">{shop.name}</h2>
+                        <p className="text-xs text-indigo-600 font-medium">
+                          PDF Invoice Name: <span className="font-semibold">{shop.invoiceName || shop.name}</span>
+                        </p>
+                      </div>
                     </div>
                     
-                      <div className="flex items-center space-x-2">
-                        <button onClick={() => handleEditShopClick(shop)} className="text-indigo-600 hover:text-indigo-900 p-1 bg-indigo-50 rounded" title="Edit Branch">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDeleteShop(shop.id, shop.name)} className="text-red-600 hover:text-red-900 p-1 bg-red-50 rounded" title="Delete Branch">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <button onClick={() => handleEditShopClick(shop)} className="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="Edit Branch">
+                        <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
+                      </button>
+                      <button onClick={() => handleDeleteShop(shop.id, shop.name)} className="text-red-600 hover:text-red-900 p-1.5 bg-red-50 hover:bg-red-100 rounded" title="Delete Branch">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-600 space-y-2 ml-13 pl-13">
-                    {shop.email && (
-                      <p className="flex items-center"><Mail className="w-4 h-4 mr-2 text-slate-400" /> {shop.email}</p>
-                    )}
-                    {shop.mobileNumber && (
-                      <p className="flex items-center"><Phone className="w-4 h-4 mr-2 text-slate-400" /> {shop.mobileNumber}</p>
-                    )}
-                    {shop.address && (
-                      <p className="flex items-start text-slate-500"><span className="font-medium mr-2 text-slate-600">Address:</span> {shop.address}</p>
+                  <div className="text-sm text-slate-600 space-y-1.5 pt-2 border-t border-slate-100">
+                    <p className="flex items-center text-xs sm:text-sm">
+                      <Mail className="w-4 h-4 mr-2 text-slate-400 flex-shrink-0" />
+                      <span className="font-medium mr-1 text-slate-500">Email:</span> {shop.email || 'Not set'}
+                    </p>
+                    <p className="flex items-center text-xs sm:text-sm">
+                      <Phone className="w-4 h-4 mr-2 text-slate-400 flex-shrink-0" />
+                      <span className="font-medium mr-1 text-slate-500">Mobile:</span> {shop.mobileNumber || 'Not set'}
+                    </p>
+                    <p className="flex items-start text-xs sm:text-sm text-slate-600">
+                      <MapPin className="w-4 h-4 mr-2 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <span><span className="font-medium text-slate-500">Address:</span> {shop.address || 'Not set'}</span>
+                    </p>
+                    {(shop.gstin || shop.legalName || shop.state) && (
+                      <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                        {shop.legalName && <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">Legal: {shop.legalName}</span>}
+                        {shop.gstin && <span className="bg-indigo-50 px-2 py-0.5 rounded text-indigo-700 border border-indigo-100 font-medium">GSTIN: {shop.gstin}</span>}
+                        {shop.state && <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">State: {shop.state}</span>}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -330,8 +345,9 @@ export default function Settings() {
                   <input type="text" required value={editShopData.name} onChange={e => setEditShopData({...editShopData, name: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">PDF Display Name</label>
+                  <label className="block text-sm font-medium text-slate-700">PDF Display Name (Printed on Invoices)</label>
                   <input type="text" placeholder="Leave blank to use Branch Name" value={editShopData.invoiceName} onChange={e => setEditShopData({...editShopData, invoiceName: e.target.value})} className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                  <p className="mt-1 text-xs text-slate-500">This business name appears on top of customer invoices & bills.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Branch Email</label>

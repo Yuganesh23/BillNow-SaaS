@@ -48,31 +48,27 @@ public class AuthService {
 
         User_entity user =
                 User_entity.builder()
-
                         .name(
                                 request.getOwnerName()
                         )
-
                         .email(
                                 request.getEmail()
                         )
-
+                        .mobileNumber(
+                                request.getMobileNumber()
+                        )
                         .password(
                                 passwordEncoder.encode(
                                         request.getPassword()
                                 )
                         )
-
                         .role(
                                 "SHOP_OWNER"
                         )
-
                         .active(
                                 true
                         )
-
                         .build();
-
 
         // =================================================
         // SAVE OWNER
@@ -83,30 +79,36 @@ public class AuthService {
                         user
                 );
 
-
         // =================================================
         // CREATE SHOP
         // =================================================
 
         Shop_entity shop =
                 Shop_entity.builder()
-
                         .name(
                                 request.getShopName()
                         )
-
+                        .invoiceName(
+                                request.getShopName()
+                        )
                         .email(
                                 request.getEmail()
                         )
-
+                        .mobileNumber(
+                                request.getMobileNumber()
+                        )
+                        .address(
+                                request.getAddress()
+                        )
+                        .logoBase64(
+                                request.getLogoBase64()
+                        )
                         .active(
                                 true
                         )
-
                         .owner(
                                 user
                         )
-
                         .build();
 
 
