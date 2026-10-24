@@ -14,6 +14,7 @@ import com.razorpay.Utils;
 import jakarta.transaction.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.json.JSONObject;
 
@@ -28,6 +29,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SaaSSubscriptionService {
 
     private final RazorpayClient razorpayClient;
@@ -36,6 +38,7 @@ public class SaaSSubscriptionService {
     private final RazorpayProperties razorpayProperties;
 
     private final SaaSSubscriptionRepository subscriptionRepository;
+    private final ProcessedWebhookEventRepository processedWebhookEventRepository;
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
@@ -489,188 +492,155 @@ public class SaaSSubscriptionService {
     public void processWebhook(
             String payload,
             String signature
-    ) {
+    ) throws RazorpayException {
+        processWebhook(payload, signature, null);
+    }
 
+    @Transactional
+    public void processWebhook(
+            String payload,
+            String signature,
+            String eventIdHeader
+    ) throws RazorpayException {
+
+        // -------------------------------------------------
+        // 1. Mandatory webhook signature verification
+        // -------------------------------------------------
+        if (signature == null || signature.isBlank()) {
+            throw new IllegalArgumentException("Missing Razorpay webhook signature");
+        }
+
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.error("Razorpay webhook secret is not configured");
+            throw new IllegalStateException("Razorpay webhook secret is not configured");
+        }
+
+        // Utils.verifyWebhookSignature throws RazorpayException if invalid
+        Utils.verifyWebhookSignature(
+                payload,
+                signature,
+                webhookSecret
+        );
+
+        JSONObject event;
         try {
+            event = new JSONObject(payload);
+        } catch (Exception e) {
+            log.error("Invalid JSON format in Razorpay webhook payload: {}", e.getMessage());
+            throw new IllegalArgumentException("Malformed JSON payload");
+        }
 
-            // -------------------------------------------------
-            // Verify webhook signature
-            // -------------------------------------------------
+        String eventName = event.optString("event", "unknown");
 
-            Utils.verifyWebhookSignature(
-                    payload,
-                    signature,
-                    webhookSecret
-            );
+        // -------------------------------------------------
+        // 2. Idempotency protection
+        // -------------------------------------------------
+        String eventId = (eventIdHeader != null && !eventIdHeader.isBlank())
+                ? eventIdHeader.trim()
+                : event.optString("event_id", event.optString("id", null));
 
-            JSONObject event =
-                    new JSONObject(payload);
-
-            String eventName =
-                    event.getString("event");
-
-            // -------------------------------------------------
-            // Get subscription entity
-            // -------------------------------------------------
-
-            JSONObject subscriptionEntity =
-                    event
-                            .getJSONObject("payload")
-                            .getJSONObject("subscription")
-                            .getJSONObject("entity");
-
-            String razorpaySubscriptionId =
-                    subscriptionEntity.getString("id");
-
-            // -------------------------------------------------
-            // Find our subscription
-            // -------------------------------------------------
-
-            Optional<SaaSSubscription_entity> optional =
-                    subscriptionRepository
-                            .findByRazorpaySubscriptionId(
-                                    razorpaySubscriptionId
-                            );
-
-            if (optional.isEmpty()) {
-
+        if (eventId != null && !eventId.isBlank()) {
+            if (processedWebhookEventRepository.existsByEventId(eventId)) {
+                log.info("Razorpay webhook event '{}' ({}) already processed. Skipping to maintain idempotency.", eventId, eventName);
                 return;
             }
+        }
 
-            SaaSSubscription_entity subscription =
-                    optional.get();
+        // -------------------------------------------------
+        // 3. Extract subscription entity
+        // -------------------------------------------------
+        JSONObject payloadObj = event.optJSONObject("payload");
+        if (payloadObj == null || !payloadObj.has("subscription")) {
+            log.info("Razorpay webhook event '{}' does not contain subscription entity. Acknowledged.", eventName);
+            recordProcessedEvent(eventId, eventName);
+            return;
+        }
 
-            // -------------------------------------------------
-            // Process events
-            // -------------------------------------------------
+        JSONObject subscriptionEntity = payloadObj.getJSONObject("subscription").optJSONObject("entity");
+        if (subscriptionEntity == null) {
+            log.warn("Subscription entity is null in webhook payload for event: {}", eventName);
+            recordProcessedEvent(eventId, eventName);
+            return;
+        }
 
-            switch (eventName) {
+        String razorpaySubscriptionId = subscriptionEntity.optString("id");
+        if (razorpaySubscriptionId == null || razorpaySubscriptionId.isBlank()) {
+            log.warn("Subscription entity missing 'id' in webhook payload for event: {}", eventName);
+            recordProcessedEvent(eventId, eventName);
+            return;
+        }
 
-                case "subscription.authenticated" -> {
+        // -------------------------------------------------
+        // 4. Find our subscription
+        // -------------------------------------------------
+        Optional<SaaSSubscription_entity> optional =
+                subscriptionRepository.findByRazorpaySubscriptionId(razorpaySubscriptionId);
 
-                    subscription.setStatus(
-                            SubscriptionStatus.ACTIVE
-                    );
+        if (optional.isEmpty()) {
+            log.warn("No local subscription found for Razorpay subscription id: {}", razorpaySubscriptionId);
+            recordProcessedEvent(eventId, eventName);
+            return;
+        }
 
-                    subscription.setActive(true);
+        SaaSSubscription_entity subscription = optional.get();
 
-                    updateDates(
-                            subscription,
-                            subscriptionEntity
-                    );
-                }
-
-                case "subscription.activated" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.ACTIVE
-                    );
-
-                    subscription.setActive(true);
-
-                    updateDates(
-                            subscription,
-                            subscriptionEntity
-                    );
-                }
-
-                case "subscription.charged" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.ACTIVE
-                    );
-
-                    subscription.setActive(true);
-
-                    updateDates(
-                            subscription,
-                            subscriptionEntity
-                    );
-                }
-
-                case "subscription.pending" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus
-                                    .AUTHENTICATION_PENDING
-                    );
-
-                    subscription.setActive(false);
-                }
-
-                case "subscription.halted" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.HALTED
-                    );
-
-                    subscription.setActive(false);
-                }
-
-                case "subscription.cancelled" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.CANCELLED
-                    );
-
-                    subscription.setActive(false);
-                }
-
-                case "subscription.completed" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.COMPLETED
-                    );
-
-                    subscription.setActive(false);
-                }
-
-                case "subscription.expired" -> {
-
-                    subscription.setStatus(
-                            SubscriptionStatus.EXPIRED
-                    );
-
-                    subscription.setActive(false);
-                }
-
-                default -> {
-                    // Ignore unrelated events
-                }
+        // -------------------------------------------------
+        // 5. Process events
+        // -------------------------------------------------
+        switch (eventName) {
+            case "subscription.authenticated", "subscription.activated", "subscription.charged" -> {
+                subscription.setStatus(SubscriptionStatus.ACTIVE);
+                subscription.setActive(true);
+                updateDates(subscription, subscriptionEntity);
             }
+            case "subscription.pending" -> {
+                subscription.setStatus(SubscriptionStatus.AUTHENTICATION_PENDING);
+                subscription.setActive(false);
+            }
+            case "subscription.halted" -> {
+                subscription.setStatus(SubscriptionStatus.HALTED);
+                subscription.setActive(false);
+            }
+            case "subscription.cancelled" -> {
+                subscription.setStatus(SubscriptionStatus.CANCELLED);
+                subscription.setActive(false);
+            }
+            case "subscription.completed" -> {
+                subscription.setStatus(SubscriptionStatus.COMPLETED);
+                subscription.setActive(false);
+            }
+            case "subscription.expired" -> {
+                subscription.setStatus(SubscriptionStatus.EXPIRED);
+                subscription.setActive(false);
+            }
+            default -> {
+                log.info("Unhandled subscription webhook event: {}", eventName);
+            }
+        }
 
-            // -------------------------------------------------
-            // Save subscription
-            // -------------------------------------------------
+        subscriptionRepository.save(subscription);
 
-            subscriptionRepository.save(
-                    subscription
-            );
+        Shop_entity shop = subscription.getShop();
+        if (shop != null) {
+            shop.setActive(subscription.isActive());
+        }
 
-            // -------------------------------------------------
-            // Update shop access
-            // -------------------------------------------------
+        recordProcessedEvent(eventId, eventName);
+    }
 
-            Shop_entity shop =
-                    subscription.getShop();
-
-            shop.setActive(
-                    subscription.isActive()
-            );
-
-        } catch (RazorpayException e) {
-
-            throw new RuntimeException(
-                    "Invalid Razorpay webhook signature",
-                    e
-            );
-
-        } catch (Exception e) {
-
-            throw new RuntimeException(
-                    "Unable to process Razorpay webhook",
-                    e
-            );
+    private void recordProcessedEvent(String eventId, String eventType) {
+        if (eventId != null && !eventId.isBlank()) {
+            try {
+                processedWebhookEventRepository.save(
+                        ProcessedWebhookEvent_entity.builder()
+                                .eventId(eventId)
+                                .eventType(eventType)
+                                .processedAt(LocalDateTime.now())
+                                .build()
+                );
+            } catch (Exception e) {
+                log.warn("Could not save processed event {}: {}", eventId, e.getMessage());
+            }
         }
     }
 

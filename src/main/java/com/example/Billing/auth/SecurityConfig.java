@@ -82,6 +82,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/webhooks/razorpay",
                                 "/error"
                         ).permitAll()
 

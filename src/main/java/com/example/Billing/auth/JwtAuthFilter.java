@@ -35,6 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
 
         return path.startsWith("/api/auth/")
+                || path.equals("/api/webhooks/razorpay")
                 || path.equals("/error");
     }
 

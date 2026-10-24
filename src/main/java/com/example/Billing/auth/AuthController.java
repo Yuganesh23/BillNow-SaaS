@@ -34,7 +34,7 @@ public class AuthController {
 
         ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(24 * 60 * 60) // 24 hours (1 day)
                 .sameSite("Lax")
@@ -42,7 +42,7 @@ public class AuthController {
 
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(24 * 60 * 60) // 24 hours (1 day)
                 .sameSite("Lax")
@@ -74,7 +74,7 @@ public class AuthController {
 
             ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
                     .httpOnly(true)
-                    .secure(false)
+                    .secure(true)
                     .path("/")
                     .maxAge(24 * 60 * 60) // 24 hours (1 day)
                     .sameSite("Lax")
@@ -82,7 +82,7 @@ public class AuthController {
 
             ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
                     .httpOnly(true)
-                    .secure(false)
+                    .secure(true)
                     .path("/")
                     .maxAge(24 * 60 * 60) // 24 hours (1 day)
                     .sameSite("Lax")
@@ -112,7 +112,7 @@ public class AuthController {
     public ResponseEntity<?> logout() {
         ResponseCookie sessionCookie = ResponseCookie.from("__session", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(0) // Expire immediately
                 .sameSite("Lax")
@@ -120,7 +120,7 @@ public class AuthController {
 
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(0) // Expire immediately
                 .sameSite("Lax")
