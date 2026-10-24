@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+
+# Frontend is hosted separately on Firebase Hosting
+frontend/
+
+# Build artifacts
+target/
