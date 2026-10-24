@@ -926,7 +926,8 @@ public class SaaSSubscriptionService {
         // Cryptographic payment signature verification
         try {
             String data = request.getRazorpayOrderId() + "|" + request.getRazorpayPaymentId();
-            boolean valid = Utils.verifySignature(data, request.getRazorpaySignature(), razorpayKeySecret);
+            String secret = razorpayKeySecret != null ? razorpayKeySecret.trim() : "";
+            boolean valid = Utils.verifySignature(data, request.getRazorpaySignature(), secret);
 
             if (!valid) {
                 log.warn("Invalid Razorpay payment signature for order {}", request.getRazorpayOrderId());

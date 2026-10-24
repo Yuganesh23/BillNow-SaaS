@@ -3,11 +3,13 @@ package com.example.Billing.config;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@Slf4j
 public class RazorpayConfig {
 
     @Value("${razorpay.key-id}")
@@ -21,9 +23,14 @@ public class RazorpayConfig {
     public RazorpayClient razorpayClient()
             throws RazorpayException {
 
+        String cleanKeyId = keyId != null ? keyId.trim() : "";
+        String cleanSecret = keySecret != null ? keySecret.trim() : "";
+
+        log.info("Initializing RazorpayClient with Key ID: [{}]", cleanKeyId);
+
         return new RazorpayClient(
-                keyId,
-                keySecret
+                cleanKeyId,
+                cleanSecret
         );
     }
 
@@ -31,8 +38,9 @@ public class RazorpayConfig {
     @Bean
     public RazorpayProperties razorpayProperties() {
 
+        String cleanKeyId = keyId != null ? keyId.trim() : "";
         return new RazorpayProperties(
-                keyId
+                cleanKeyId
         );
     }
 
