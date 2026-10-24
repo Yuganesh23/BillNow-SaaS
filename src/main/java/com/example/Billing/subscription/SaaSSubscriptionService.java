@@ -21,10 +21,17 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
+import com.example.Billing.shop.ShopRepository;
+import com.example.Billing.shop.SubscriptionTier;
+import com.example.Billing.subscription.dto.CreateOrderRequest_Dto;
+import com.example.Billing.subscription.dto.VerifyOrderRequest_Dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 
 @Service
@@ -39,6 +46,7 @@ public class SaaSSubscriptionService {
 
     private final SaaSSubscriptionRepository subscriptionRepository;
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
+    private final ShopRepository shopRepository;
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
@@ -828,5 +836,117 @@ public class SaaSSubscriptionService {
                 )
 
                 .build();
+    }
+
+    // =========================================================
+    // CREATE UPGRADE ORDER FOR CHECKOUT
+    // =========================================================
+
+    @Transactional
+    public Map<String, Object> createUpgradeOrder(
+            User_entity user,
+            CreateOrderRequest_Dto request
+    ) {
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        Shop_entity shop = shopRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new RuntimeException("Branch not found"));
+
+        if (!shop.getOwner().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized: you do not own this shop");
+        }
+
+        long amountInPaise;
+        if (request.getAmount() != null && request.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+            amountInPaise = request.getAmount().multiply(new BigDecimal(100)).longValue();
+        } else {
+            String tierUpper = request.getTier().toUpperCase();
+            amountInPaise = switch (tierUpper) {
+                case "BASE" -> 49900L;
+                case "PRO" -> 99900L;
+                case "ENTERPRISE" -> 249900L;
+                default -> 49900L;
+            };
+        }
+
+        try {
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("amount", amountInPaise);
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", "rcpt_" + shop.getId() + "_" + (System.currentTimeMillis() % 1000000));
+
+            JSONObject notes = new JSONObject();
+            notes.put("branchId", String.valueOf(shop.getId()));
+            notes.put("tier", request.getTier());
+            notes.put("ownerEmail", user.getEmail());
+            orderRequest.put("notes", notes);
+
+            com.razorpay.Order order = razorpayClient.orders.create(orderRequest);
+            String orderId = order.get("id");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("orderId", orderId);
+            response.put("amount", amountInPaise);
+            response.put("currency", "INR");
+            response.put("keyId", razorpayProperties.keyId());
+            response.put("tier", request.getTier());
+            response.put("branchId", shop.getId());
+            return response;
+
+        } catch (RazorpayException e) {
+            log.error("Failed to create Razorpay order: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create Razorpay payment order: " + e.getMessage(), e);
+        }
+    }
+
+    // =========================================================
+    // VERIFY UPGRADE ORDER & ACTIVATE TIER
+    // =========================================================
+
+    @Transactional
+    public Shop_entity verifyUpgradeOrder(
+            User_entity user,
+            VerifyOrderRequest_Dto request
+    ) {
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        Shop_entity shop = shopRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new RuntimeException("Branch not found"));
+
+        if (!shop.getOwner().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized: you do not own this shop");
+        }
+
+        // Cryptographic payment signature verification
+        try {
+            String data = request.getRazorpayOrderId() + "|" + request.getRazorpayPaymentId();
+            boolean valid = Utils.verifySignature(data, request.getRazorpaySignature(), razorpayKeySecret);
+
+            if (!valid) {
+                log.warn("Invalid Razorpay payment signature for order {}", request.getRazorpayOrderId());
+                throw new RuntimeException("Invalid payment signature");
+            }
+        } catch (RazorpayException e) {
+            log.error("Razorpay signature verification error: {}", e.getMessage());
+            throw new RuntimeException("Invalid payment signature: " + e.getMessage(), e);
+        }
+
+        // Upgrade shop tier and grant 30 days access
+        SubscriptionTier newTier = SubscriptionTier.valueOf(request.getTier().toUpperCase());
+        shop.setSubscriptionTier(newTier);
+        shop.setSubscriptionEndsAt(LocalDateTime.now().plusDays(30));
+        shop.setActive(true);
+
+        Shop_entity savedShop = shopRepository.save(shop);
+        log.info("Successfully upgraded shop {} ({}) to {}", shop.getName(), shop.getId(), newTier);
+
+        // Record for idempotency
+        recordProcessedEvent(request.getRazorpayPaymentId(), "order.paid." + request.getTier());
+
+        return savedShop;
     }
 }

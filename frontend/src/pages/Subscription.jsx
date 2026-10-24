@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
@@ -34,43 +34,81 @@ export default function Subscription() {
         alert("Please select a branch first.");
         return;
     }
+
+    if (!window.Razorpay) {
+        alert("Razorpay Checkout SDK is still loading. Please check your internet connection or reload the page.");
+        return;
+    }
     
     try {
         setUpgradingTier(tier);
         
-        // ==========================================
-        // FUTURE RAZORPAY INTEGRATION GOES HERE
-        // ==========================================
-        // 1. Call Backend to create a Razorpay Order:
-        //    const orderResponse = await axiosClient.post('/payments/create-order', { amount: price });
-        // 2. Open Razorpay Checkout Window:
-        //    const options = {
-        //        key: "YOUR_RAZORPAY_KEY", 
-        //        amount: price * 100, 
-        //        order_id: orderResponse.data.id,
-        //        handler: async function (response) {
-        //            // 3. Payment Successful! Now update the database:
-        //            await axiosClient.post(`/shops/${currentBranch.id}/upgrade`, { tier });
-        //            alert(`Successfully upgraded to ${tier}!`);
-        //            window.location.reload();
-        //        }
-        //    };
-        //    const rzp = new window.Razorpay(options);
-        //    rzp.open();
-        // ==========================================
-        
-        // For now, simulating the successful payment delay:
-        await new Promise(r => setTimeout(r, 1500));
-        await axiosClient.post(`/shops/${currentBranch.id}/upgrade`, { tier });
-        
-        alert(`Successfully upgraded to ${tier}! Your payment was processed.`);
-        await fetchBranches();
-        window.location.reload();
+        // 1. Create Razorpay order on backend
+        const { data: orderData } = await axiosClient.post('/subscription/create-order', {
+            tier,
+            branchId: currentBranch.id,
+            amount: price
+        });
+
+        // 2. Open standard Razorpay Checkout window
+        const options = {
+            key: orderData.keyId,
+            amount: orderData.amount,
+            currency: orderData.currency || "INR",
+            name: "XenBill",
+            description: `${tier} Subscription Plan (30 Days)`,
+            image: "/favicon.svg",
+            order_id: orderData.orderId,
+            handler: async function (response) {
+                try {
+                    setUpgradingTier(tier);
+                    // 3. Cryptographically verify payment on backend & activate tier
+                    await axiosClient.post('/subscription/verify-order', {
+                        razorpayOrderId: response.razorpay_order_id,
+                        razorpayPaymentId: response.razorpay_payment_id,
+                        razorpaySignature: response.razorpay_signature,
+                        branchId: currentBranch.id,
+                        tier: tier
+                    });
+
+                    alert(`Payment successful! Your shop has been upgraded to ${tier}.`);
+                    await fetchBranches();
+                    window.location.reload();
+                } catch (verifyError) {
+                    console.error("Payment verification failed:", verifyError);
+                    const msg = verifyError.response?.data?.message || "Payment verification failed. Please contact support.";
+                    alert(msg);
+                } finally {
+                    setUpgradingTier(null);
+                }
+            },
+            prefill: {
+                name: user?.name || "",
+                email: user?.email || "",
+                contact: currentBranch?.mobileNumber || user?.mobileNumber || ""
+            },
+            theme: {
+                color: "#4f46e5"
+            },
+            modal: {
+                ondismiss: function () {
+                    setUpgradingTier(null);
+                }
+            }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+            console.error("Razorpay payment failed:", resp.error);
+            alert(`Payment failed: ${resp.error?.description || resp.error?.reason || 'Transaction could not be completed'}`);
+            setUpgradingTier(null);
+        });
+        rzp.open();
         
     } catch (e) {
-        console.error(e);
-        alert("Failed to upgrade plan.");
-    } finally {
+        console.error("Order creation failed:", e);
+        const errorMsg = e.response?.data?.message || e.message || "Failed to initiate payment.";
+        alert(errorMsg);
         setUpgradingTier(null);
     }
   };
