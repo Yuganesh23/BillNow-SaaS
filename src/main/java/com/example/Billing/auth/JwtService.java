@@ -20,7 +20,7 @@ public class JwtService {
     private String secretKey;
 
     private static final long EXPIRATION_TIME =
-            1000 * 60 * 60; // 1 hour
+            1000L * 60 * 60 * 24; // 24 hours (1 day)
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(

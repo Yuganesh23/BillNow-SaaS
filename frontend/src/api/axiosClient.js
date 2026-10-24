@@ -9,7 +9,10 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use((config) => {
-  // Token is now securely handled via HttpOnly Cookies automatically
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   
   const branchId = localStorage.getItem('activeBranchId');
   if (branchId) {
@@ -21,10 +24,10 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Clear token and redirect to login if unauthorized
-      // token cookie will be cleared by the backend or expires automatically
+    const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+    if (!isAuthEndpoint && error.response && error.response.status === 401) {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);

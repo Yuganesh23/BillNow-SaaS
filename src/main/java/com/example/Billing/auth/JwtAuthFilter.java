@@ -34,8 +34,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        return path.equals("/api/auth/register")
-                || path.equals("/api/auth/login");
+        return path.startsWith("/api/auth/")
+                || path.equals("/error");
     }
 
 
@@ -64,21 +64,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = null;
 
-        // 1. Try from Cookie
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("jwt".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
+        // 1. Try from Authorization Header
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7).trim();
         }
 
-        // 2. Fallback to Authorization Header
-        if (token == null || token.isBlank()) {
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                token = authHeader.substring(7);
+        // 2. Fallback to Cookies (__session for Firebase Hosting or jwt)
+        if ((token == null || token.isBlank()) && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("__session".equals(cookie.getName()) || "jwt".equals(cookie.getName())) {
+                    if (cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                        token = cookie.getValue();
+                        break;
+                    }
+                }
             }
         }
 

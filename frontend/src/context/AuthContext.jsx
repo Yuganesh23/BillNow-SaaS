@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  // Token managed securely via HttpOnly cookies
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,6 +26,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await loginApi({ email, password });
       const { token, ...userData } = response.data || response;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       return true;
@@ -46,6 +48,7 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   const value = {

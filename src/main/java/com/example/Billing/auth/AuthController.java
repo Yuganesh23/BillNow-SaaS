@@ -32,19 +32,26 @@ public class AuthController {
                         request
                 );
 
-        ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
+        ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
                 .httpOnly(true)
-                .secure(false) // Set true in production (HTTPS)
+                .secure(false)
                 .path("/")
-                .maxAge(7 * 24 * 60 * 60) // 7 days
+                .maxAge(24 * 60 * 60) // 24 hours (1 day)
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(24 * 60 * 60) // 24 hours (1 day)
                 .sameSite("Lax")
                 .build();
                 
-        // Return without token in body to be safe, or leave it for now.
-        // We'll let frontend ignore it and just use the cookie.
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(response);
     }
 
@@ -65,16 +72,25 @@ public class AuthController {
                         request
                 );
 
-        ResponseCookie cookie = ResponseCookie.from("jwt", response.getToken())
+        ResponseCookie sessionCookie = ResponseCookie.from("__session", response.getToken())
                 .httpOnly(true)
-                .secure(false) // Set true in prod
+                .secure(false)
                 .path("/")
-                .maxAge(7 * 24 * 60 * 60)
+                .maxAge(24 * 60 * 60) // 24 hours (1 day)
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(24 * 60 * 60) // 24 hours (1 day)
                 .sameSite("Lax")
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(response);
     }
 
@@ -84,7 +100,15 @@ public class AuthController {
     // =====================================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        ResponseCookie cookie = ResponseCookie.from("jwt", "")
+        ResponseCookie sessionCookie = ResponseCookie.from("__session", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0) // Expire immediately
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
@@ -93,7 +117,8 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body("Logged out successfully");
     }
 
