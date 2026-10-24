@@ -22,4 +22,6 @@ public class CreateOrderRequest_Dto {
     private Long branchId;
 
     private BigDecimal amount;
+
+    private String billingCycle;
 }

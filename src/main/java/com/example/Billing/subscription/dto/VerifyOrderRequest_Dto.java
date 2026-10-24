@@ -27,4 +27,6 @@ public class VerifyOrderRequest_Dto {
 
     @NotBlank(message = "Tier is required")
     private String tier;
+
+    private String billingCycle;
 }

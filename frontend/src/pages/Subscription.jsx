@@ -8,6 +8,9 @@ export default function Subscription() {
   const { user } = useAuth();
   const { branches, activeBranchId, fetchBranches } = useBranch();
   
+  // Track billing cycle: 'MONTHLY' or 'ANNUAL'
+  const [billingCycle, setBillingCycle] = useState('MONTHLY');
+
   // Track specifically which tier is being upgraded to show the correct loading button
   const [upgradingTier, setUpgradingTier] = useState(null);
   
@@ -29,7 +32,7 @@ export default function Subscription() {
       expires.setDate(expires.getDate() + 7);
   }
 
-  const handleUpgrade = async (tier, price) => {
+  const handleUpgrade = async (tier, price, cycle = billingCycle) => {
     if (!currentBranch) {
         alert("Please select a branch first.");
         return;
@@ -47,7 +50,8 @@ export default function Subscription() {
         const { data: orderData } = await axiosClient.post('/subscription/create-order', {
             tier,
             branchId: currentBranch.id,
-            amount: price
+            amount: price,
+            billingCycle: cycle
         });
 
         // 2. Open standard Razorpay Checkout window
@@ -56,7 +60,7 @@ export default function Subscription() {
             amount: orderData.amount,
             currency: orderData.currency || "INR",
             name: "XenBill",
-            description: `${tier} Subscription Plan (30 Days)`,
+            description: `${tier} ${cycle === 'ANNUAL' ? 'Annual Plan (1 Year)' : 'Monthly Plan (30 Days)'}`,
             image: "/favicon.svg",
             order_id: orderData.orderId,
             handler: async function (response) {
@@ -68,10 +72,11 @@ export default function Subscription() {
                         razorpayPaymentId: response.razorpay_payment_id,
                         razorpaySignature: response.razorpay_signature,
                         branchId: currentBranch.id,
-                        tier: tier
+                        tier: tier,
+                        billingCycle: cycle
                     });
 
-                    alert(`Payment successful! Your shop has been upgraded to ${tier}.`);
+                    alert(`Payment successful! Your shop has been upgraded to ${tier} (${cycle === 'ANNUAL' ? 'Annual' : 'Monthly'}).`);
                     await fetchBranches();
                     window.location.reload();
                 } catch (verifyError) {
@@ -137,6 +142,37 @@ export default function Subscription() {
         </div>
       </div>
 
+      {/* BILLING CYCLE SELECTOR */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-slate-100 p-1.5 rounded-2xl inline-flex items-center shadow-inner">
+          <button
+            type="button"
+            onClick={() => setBillingCycle('MONTHLY')}
+            className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              billingCycle === 'MONTHLY'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Monthly Billing
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle('ANNUAL')}
+            className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${
+              billingCycle === 'ANNUAL'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Annual Billing
+            <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Save ~17%
+            </span>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* BASE TIER */}
@@ -148,18 +184,29 @@ export default function Subscription() {
           )}
           <h3 className={`text-xl font-bold ${highlightedTier === 'BASE' ? 'text-indigo-600' : 'text-slate-900'}`}>BASE</h3>
           <p className="mt-4 text-sm text-slate-500 flex-grow">Perfect for single shops needing fast, reliable billing.</p>
-          <p className="mt-6 flex items-baseline gap-x-1">
-            <span className="text-4xl font-bold tracking-tight text-slate-900">₹499</span>
-            <span className="text-sm font-semibold text-slate-500">/month</span>
-          </p>
+          <div className="mt-6">
+            <p className="flex items-baseline gap-x-1">
+              <span className="text-4xl font-bold tracking-tight text-slate-900">
+                {billingCycle === 'ANNUAL' ? '₹4,999' : '₹499'}
+              </span>
+              <span className="text-sm font-semibold text-slate-500">
+                {billingCycle === 'ANNUAL' ? '/year' : '/month'}
+              </span>
+            </p>
+            {billingCycle === 'ANNUAL' && (
+              <p className="text-xs text-emerald-600 font-medium mt-1">₹416/mo · Save ₹989 per year</p>
+            )}
+          </div>
           <button 
-            onClick={() => handleUpgrade('BASE', 499)}
-            disabled={upgradingTier !== null || currentPlan === 'BASE'}
+            onClick={() => handleUpgrade('BASE', billingCycle === 'ANNUAL' ? 4999 : 499)}
+            disabled={upgradingTier !== null || (currentPlan === 'BASE' && billingCycle === 'MONTHLY')}
             className={`mt-8 block w-full rounded-md py-2.5 px-3 text-center text-sm font-semibold transition-all ${
-              currentPlan === 'BASE' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
+              currentPlan === 'BASE' && billingCycle === 'MONTHLY' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
               highlightedTier === 'BASE' ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-500' : 'text-indigo-600 ring-1 ring-inset ring-indigo-200 hover:ring-indigo-300'
             }`}>
-            {currentPlan === 'BASE' ? 'Current Plan' : upgradingTier === 'BASE' ? 'Processing...' : 'Subscribe to Base'}
+            {currentPlan === 'BASE' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
+             currentPlan === 'BASE' && billingCycle === 'ANNUAL' ? 'Switch to Annual' : 
+             upgradingTier === 'BASE' ? 'Processing...' : 'Subscribe to Base'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Unlimited Invoices</li>
@@ -177,19 +224,30 @@ export default function Subscription() {
           )}
           <h3 className={`text-xl font-bold ${highlightedTier === 'PRO' ? 'text-indigo-600' : 'text-slate-900'}`}>PRO</h3>
           <p className="mt-4 text-sm text-slate-500 flex-grow">Advanced features for growing retail shops.</p>
-          <p className="mt-6 flex items-baseline gap-x-1">
-            <span className="text-4xl font-bold tracking-tight text-slate-900">₹999</span>
-            <span className="text-sm font-semibold text-slate-500">/month</span>
-          </p>
+          <div className="mt-6">
+            <p className="flex items-baseline gap-x-1">
+              <span className="text-4xl font-bold tracking-tight text-slate-900">
+                {billingCycle === 'ANNUAL' ? '₹9,999' : '₹999'}
+              </span>
+              <span className="text-sm font-semibold text-slate-500">
+                {billingCycle === 'ANNUAL' ? '/year' : '/month'}
+              </span>
+            </p>
+            {billingCycle === 'ANNUAL' && (
+              <p className="text-xs text-emerald-600 font-medium mt-1">₹833/mo · Save ₹1,989 per year</p>
+            )}
+          </div>
           <button 
-            onClick={() => handleUpgrade('PRO', 999)}
-            disabled={upgradingTier !== null || currentPlan === 'PRO' || currentPlan === 'ENTERPRISE'}
+            onClick={() => handleUpgrade('PRO', billingCycle === 'ANNUAL' ? 9999 : 999)}
+            disabled={upgradingTier !== null || (currentPlan === 'PRO' && billingCycle === 'MONTHLY') || currentPlan === 'ENTERPRISE'}
             className={`mt-8 block w-full rounded-md py-2.5 px-3 text-center text-sm font-semibold transition-all ${
-              currentPlan === 'PRO' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
-              currentPlan === 'ENTERPRISE' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
+              (currentPlan === 'PRO' && billingCycle === 'MONTHLY') || currentPlan === 'ENTERPRISE' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
               highlightedTier === 'PRO' ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-500' : 'text-indigo-600 ring-1 ring-inset ring-indigo-200 hover:ring-indigo-300'
             }`}>
-            {currentPlan === 'PRO' ? 'Current Plan' : currentPlan === 'ENTERPRISE' ? 'Included' : upgradingTier === 'PRO' ? 'Processing...' : 'Upgrade to Pro'}
+            {currentPlan === 'PRO' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
+             currentPlan === 'PRO' && billingCycle === 'ANNUAL' ? 'Switch to Annual' :
+             currentPlan === 'ENTERPRISE' ? 'Included' : 
+             upgradingTier === 'PRO' ? 'Processing...' : 'Upgrade to Pro'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Everything in Base</li>
@@ -208,18 +266,29 @@ export default function Subscription() {
           )}
           <h3 className={`text-xl font-bold ${highlightedTier === 'ENTERPRISE' ? 'text-indigo-600' : 'text-slate-900'}`}>ENTERPRISE</h3>
           <p className="mt-4 text-sm text-slate-500 flex-grow">For large wholesalers or multi-branch networks.</p>
-          <p className="mt-6 flex items-baseline gap-x-1">
-            <span className="text-4xl font-bold tracking-tight text-slate-900">₹2,499</span>
-            <span className="text-sm font-semibold text-slate-500">/month</span>
-          </p>
+          <div className="mt-6">
+            <p className="flex items-baseline gap-x-1">
+              <span className="text-4xl font-bold tracking-tight text-slate-900">
+                {billingCycle === 'ANNUAL' ? '₹24,990' : '₹2,499'}
+              </span>
+              <span className="text-sm font-semibold text-slate-500">
+                {billingCycle === 'ANNUAL' ? '/year' : '/month'}
+              </span>
+            </p>
+            {billingCycle === 'ANNUAL' && (
+              <p className="text-xs text-emerald-600 font-medium mt-1">₹2,082/mo · Save ₹4,998 per year</p>
+            )}
+          </div>
           <button 
-            onClick={() => handleUpgrade('ENTERPRISE', 2499)}
-            disabled={upgradingTier !== null || currentPlan === 'ENTERPRISE'}
+            onClick={() => handleUpgrade('ENTERPRISE', billingCycle === 'ANNUAL' ? 24990 : 2499)}
+            disabled={upgradingTier !== null || (currentPlan === 'ENTERPRISE' && billingCycle === 'MONTHLY')}
             className={`mt-8 block w-full rounded-md py-2.5 px-3 text-center text-sm font-semibold transition-all ${
-              currentPlan === 'ENTERPRISE' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
+              currentPlan === 'ENTERPRISE' && billingCycle === 'MONTHLY' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
               highlightedTier === 'ENTERPRISE' ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-500' : 'text-indigo-600 ring-1 ring-inset ring-indigo-200 hover:ring-indigo-300'
             }`}>
-            {currentPlan === 'ENTERPRISE' ? 'Current Plan' : upgradingTier === 'ENTERPRISE' ? 'Processing...' : 'Upgrade to Enterprise'}
+            {currentPlan === 'ENTERPRISE' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
+             currentPlan === 'ENTERPRISE' && billingCycle === 'ANNUAL' ? 'Switch to Annual' : 
+             upgradingTier === 'ENTERPRISE' ? 'Processing...' : 'Upgrade to Enterprise'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Everything in Pro</li>

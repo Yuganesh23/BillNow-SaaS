@@ -859,17 +859,27 @@ public class SaaSSubscriptionService {
             throw new RuntimeException("Unauthorized: you do not own this shop");
         }
 
+        boolean isAnnual = "ANNUAL".equalsIgnoreCase(request.getBillingCycle()) || "YEARLY".equalsIgnoreCase(request.getBillingCycle());
         long amountInPaise;
         if (request.getAmount() != null && request.getAmount().compareTo(BigDecimal.ZERO) > 0) {
             amountInPaise = request.getAmount().multiply(new BigDecimal(100)).longValue();
         } else {
             String tierUpper = request.getTier().toUpperCase();
-            amountInPaise = switch (tierUpper) {
-                case "BASE" -> 49900L;
-                case "PRO" -> 99900L;
-                case "ENTERPRISE" -> 249900L;
-                default -> 49900L;
-            };
+            if (isAnnual) {
+                amountInPaise = switch (tierUpper) {
+                    case "BASE" -> 499900L;
+                    case "PRO" -> 999900L;
+                    case "ENTERPRISE" -> 2499000L;
+                    default -> 499900L;
+                };
+            } else {
+                amountInPaise = switch (tierUpper) {
+                    case "BASE" -> 49900L;
+                    case "PRO" -> 99900L;
+                    case "ENTERPRISE" -> 249900L;
+                    default -> 49900L;
+                };
+            }
         }
 
         try {
@@ -881,6 +891,7 @@ public class SaaSSubscriptionService {
             JSONObject notes = new JSONObject();
             notes.put("branchId", String.valueOf(shop.getId()));
             notes.put("tier", request.getTier());
+            notes.put("billingCycle", isAnnual ? "ANNUAL" : "MONTHLY");
             notes.put("ownerEmail", user.getEmail() != null ? user.getEmail() : "");
             orderRequest.put("notes", notes);
 
@@ -893,6 +904,7 @@ public class SaaSSubscriptionService {
             response.put("currency", "INR");
             response.put("keyId", razorpayProperties.keyId());
             response.put("tier", request.getTier());
+            response.put("billingCycle", isAnnual ? "ANNUAL" : "MONTHLY");
             response.put("branchId", shop.getId());
             return response;
 
@@ -938,17 +950,18 @@ public class SaaSSubscriptionService {
             throw new RuntimeException("Invalid payment signature: " + e.getMessage(), e);
         }
 
-        // Upgrade shop tier and grant 30 days access
+        // Upgrade shop tier and grant access (365 days for ANNUAL, 30 days for MONTHLY)
+        boolean isAnnual = "ANNUAL".equalsIgnoreCase(request.getBillingCycle()) || "YEARLY".equalsIgnoreCase(request.getBillingCycle());
         SubscriptionTier newTier = SubscriptionTier.valueOf(request.getTier().toUpperCase());
         shop.setSubscriptionTier(newTier);
-        shop.setSubscriptionEndsAt(LocalDateTime.now().plusDays(30));
+        shop.setSubscriptionEndsAt(LocalDateTime.now().plusDays(isAnnual ? 365 : 30));
         shop.setActive(true);
 
         Shop_entity savedShop = shopRepository.save(shop);
-        log.info("Successfully upgraded shop {} ({}) to {}", shop.getName(), shop.getId(), newTier);
+        log.info("Successfully upgraded shop {} ({}) to {} ({})", shop.getName(), shop.getId(), newTier, isAnnual ? "ANNUAL" : "MONTHLY");
 
         // Record for idempotency
-        recordProcessedEvent(request.getRazorpayPaymentId(), "order.paid." + request.getTier());
+        recordProcessedEvent(request.getRazorpayPaymentId(), "order.paid." + request.getTier() + "." + (isAnnual ? "annual" : "monthly"));
 
         return savedShop;
     }
