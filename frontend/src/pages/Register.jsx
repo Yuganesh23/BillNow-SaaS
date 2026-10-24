@@ -1,7 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import { User, Store, Mail, Phone, MapPin, Lock, UserPlus, CheckCircle2 } from 'lucide-react';
+import { User, Store, Mail, Phone, MapPin, Lock, UserPlus, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -14,6 +14,7 @@ export default function Register() {
     logoBase64: ''
   });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -251,14 +252,22 @@ export default function Register() {
                     <Lock className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     minLength="6"
-                    className="focus:ring-green-500 focus:border-green-500 block w-full bg-white text-slate-900 pl-10 sm:text-sm border-slate-300 rounded-md py-2 border transition-colors"
+                    className="focus:ring-green-500 focus:border-green-500 block w-full bg-white text-slate-900 pl-10 pr-10 sm:text-sm border-slate-300 rounded-md py-2 border transition-colors"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">Must be at least 6 characters.</p>
               </div>

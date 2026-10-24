@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomers, createCustomer } from '../api/customerApi';
 import { getProducts } from '../api/productApi';
@@ -6,7 +6,7 @@ import { createInvoice } from '../api/invoiceApi';
 import { createPayment } from '../api/paymentApi';
 import { calculateInvoiceTotals } from '../utils/invoiceCalc';
 import { useBranch } from '../context/BranchContext';
-import { Plus, Trash2, ArrowLeft, Save, QrCode } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Save, QrCode, Search, Phone, X, Check } from 'lucide-react';
 import QRScannerModal from '../components/QRScannerModal';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +17,10 @@ export default function CreateInvoice() {
   const [products, setProducts] = useState([]);
   
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const customerDropdownRef = useRef(null);
+  
   const [items, setItems] = useState([{ id: Date.now(), productId: '', quantity: 1, product: null }]);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState('AMOUNT');
@@ -29,14 +33,26 @@ export default function CreateInvoice() {
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setIsCustomerDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleAddCustomer = async () => {
     setIsAddingCustomer(true);
     try {
       const added = await createCustomer(newCustomer);
-      setCustomers([...customers, added]);
-      setSelectedCustomerId(added.id);
+      setCustomers(prev => [...prev, added]);
+      setSelectedCustomerId(added.id.toString());
       setShowCustomerModal(false);
-      setNewCustomer({ name: '', whatsappNumber: '', email: '' });
+      setIsCustomerDropdownOpen(false);
+      setCustomerSearch('');
+      setNewCustomer({ name: '', whatsappNumber: '', email: '', address: '', gstin: '', state: '' });
     } catch(err) {
       alert('Failed to add customer');
     }
@@ -103,6 +119,16 @@ export default function CreateInvoice() {
     const activeCustomer = customers?.find(c => c.id.toString() === selectedCustomerId);
     const customerState = activeCustomer?.state || '';
 
+    const selectedCustomer = customers?.find(c => c.id.toString() === selectedCustomerId?.toString());
+
+    const filteredCustomers = customers.filter(c => {
+      if (!customerSearch.trim()) return true;
+      const term = customerSearch.toLowerCase().trim();
+      const matchesName = c.name?.toLowerCase().includes(term);
+      const matchesPhone = c.whatsappNumber?.toLowerCase().includes(term);
+      return matchesName || matchesPhone;
+    });
+
     const totals = calculateInvoiceTotals(items, discountAmount, discountType, shopState, customerState);
 
   
@@ -163,67 +189,203 @@ export default function CreateInvoice() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Customer Section */}
-        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Customer Details</h2>
-          <div className="max-w-md flex items-end gap-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-700">Select Customer <span className="text-red-500">*</span></label>
-              <select
-                required
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-              >
-                <option value="">Select a customer</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.whatsappNumber})</option>
-                ))}
-              </select>
-            </div>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-slate-700">Select Customer <span className="text-red-500">*</span></label>
             <button
               type="button"
-              onClick={() => setShowCustomerModal(true)}
-              className="mb-1 inline-flex items-center p-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              title="Add New Customer"
+              onClick={() => {
+                setNewCustomer({ name: '', whatsappNumber: '', email: '', address: '', gstin: '', state: '' });
+                setShowCustomerModal(true);
+              }}
+              className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add New Customer
             </button>
           </div>
+
+          {selectedCustomer ? (
+            <div className="p-3 sm:p-4 bg-indigo-50/70 border border-indigo-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-base shadow-sm">
+                  {selectedCustomer.name?.charAt(0)?.toUpperCase() || 'C'}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 text-base truncate">{selectedCustomer.name}</div>
+                  <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+                    <span className="flex items-center text-slate-700">
+                      <Phone className="w-3.5 h-3.5 mr-1 text-slate-500" /> {selectedCustomer.whatsappNumber}
+                    </span>
+                    {selectedCustomer.gstin && (
+                      <span className="bg-white px-1.5 py-0.5 rounded text-[11px] font-medium border border-indigo-100 text-indigo-700">
+                        GST: {selectedCustomer.gstin}
+                      </span>
+                    )}
+                    {selectedCustomer.state && (
+                      <span className="text-slate-500">({selectedCustomer.state})</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCustomerId('');
+                  setCustomerSearch('');
+                  setIsCustomerDropdownOpen(true);
+                }}
+                className="ml-3 flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 shadow-sm transition-colors"
+              >
+                Change
+              </button>
+            </div>
+          ) : (
+            <div className="relative max-w-lg" ref={customerDropdownRef}>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-9 pr-8 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search by customer name or mobile number..."
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setIsCustomerDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsCustomerDropdownOpen(true)}
+                  />
+                  {customerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerSearch('')}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewCustomer({
+                      name: isNaN(customerSearch) ? customerSearch : '',
+                      whatsappNumber: !isNaN(customerSearch) ? customerSearch : '',
+                      email: '',
+                      address: '',
+                      gstin: '',
+                      state: ''
+                    });
+                    setShowCustomerModal(true);
+                  }}
+                  className="inline-flex items-center px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  title="Add New Customer"
+                >
+                  <Plus className="h-5 w-5 text-indigo-600" />
+                  <span className="ml-1 hidden sm:inline">Add</span>
+                </button>
+              </div>
+
+              {/* Customer Dropdown Results */}
+              {isCustomerDropdownOpen && (
+                <div className="absolute z-30 mt-1 w-full bg-white shadow-xl max-h-64 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-sm text-slate-500 mb-2">No customer found for "{customerSearch}"</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomerDropdownOpen(false);
+                          setNewCustomer({
+                            name: isNaN(customerSearch) ? customerSearch : '',
+                            whatsappNumber: !isNaN(customerSearch) ? customerSearch : '',
+                            email: '',
+                            address: '',
+                            gstin: '',
+                            state: ''
+                          });
+                          setShowCustomerModal(true);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Add "{customerSearch}" as Customer
+                      </button>
+                    </div>
+                  ) : (
+                    filteredCustomers.slice(0, 20).map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomerId(c.id.toString());
+                          setIsCustomerDropdownOpen(false);
+                          setCustomerSearch('');
+                        }}
+                        className="cursor-pointer select-none relative py-2.5 px-4 hover:bg-indigo-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-b-0"
+                      >
+                        <div>
+                          <div className="font-medium text-slate-900">{c.name}</div>
+                          <div className="text-xs text-slate-500 flex items-center mt-0.5">
+                            <Phone className="w-3 h-3 mr-1 text-slate-400" /> {c.whatsappNumber}
+                            {c.gstin && <span className="ml-2 text-indigo-600">GST: {c.gstin}</span>}
+                          </div>
+                        </div>
+                        <span className="text-xs text-indigo-600 font-medium">Select</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Items Section */}
-        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-slate-900 mb-4">Invoice Items</h2>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-slate-900">Invoice Items</h2>
+            <div className="text-xs text-slate-400 sm:hidden">
+              Scroll horizontally →
+            </div>
+          </div>
           
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 mb-4">
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table className="min-w-[640px] divide-y divide-slate-200 mb-4">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Product <span className="text-red-500">*</span></th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-32">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-32">Quantity <span className="text-red-500">*</span></th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase min-w-[260px]">Product <span className="text-red-500">*</span></th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-28">Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-28">Quantity <span className="text-red-500">*</span></th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase w-32">Total</th>
-                  <th className="px-4 py-3 w-16"></th>
+                  <th className="px-4 py-3 w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {items.map((item, index) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 min-w-[260px]">
                       <select
                         required
                         value={item.productId}
                         onChange={(e) => handleItemChange(item.id, 'productId', e.target.value)}
-                        className="block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                        className="block w-full min-w-[240px] pl-3 pr-8 py-2 text-sm bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">Select product</option>
                         {products.map(p => (
                           <option key={p.id} value={p.id}>{p.name} {p.category ? `(${p.category})` : ''}</option>
                         ))}
                       </select>
+                      {item.product && (
+                        <div className="mt-1 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="font-semibold text-indigo-600 truncate max-w-[200px]">{item.product.name}</span>
+                          {item.product.sku && <span className="text-slate-400">({item.product.sku})</span>}
+                          <span className="text-slate-400">• Stock: {item.product.stockQuantity}</span>
+                        </div>
+                      )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-slate-900">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-slate-900">
                         ₹{item.product?.sellingPrice || 0}
                       </div>
                     </td>
@@ -233,22 +395,23 @@ export default function CreateInvoice() {
                         required
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                        className="block w-full border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full border border-slate-300 rounded-md shadow-sm py-1.5 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="text-sm font-medium text-slate-900">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="text-sm font-semibold text-slate-900">
                         ₹{totals.items[index].itemSubtotal.toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
                         disabled={items.length === 1}
-                        className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                        className="text-red-500 hover:text-red-700 disabled:opacity-30 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Remove item"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="h-5 w-5" />
                       </button>
                     </td>
                   </tr>
