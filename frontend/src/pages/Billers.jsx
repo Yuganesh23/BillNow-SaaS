@@ -20,7 +20,8 @@ export default function Billers() {
   const planTier = currentBranch?.subscriptionTier || 'TRIAL';
   const isBasePlan = planTier === 'BASE';
   const isProPlan = planTier === 'PRO';
-  const isAtStaffLimit = isBasePlan || (isProPlan && billers.length >= 3);
+  const staffAccounts = billers.filter(b => b.role === "BILLER");
+  const isAtStaffLimit = isBasePlan || (isProPlan && staffAccounts.length >= 3);
 
   const fetchBillers = async () => {
     try {
@@ -43,7 +44,7 @@ export default function Billers() {
       alert("Staff accounts are not included in the BASE plan (1 Administrator only).\n\nPlease upgrade to PRO in the Subscription tab to add up to 3 staff members.");
       return;
     }
-    if (!biller && isProPlan && billers.length >= 3) {
+    if (!biller && isProPlan && staffAccounts.length >= 3) {
       alert("You have reached the limit of 3 staff accounts on the PRO plan.\n\nPlease upgrade to ENTERPRISE in the Subscription tab for unlimited staff accounts.");
       return;
     }
@@ -83,7 +84,7 @@ export default function Billers() {
     }
   };
 
-  if (error) return <div className="p-8 text-red-500">{error}</div>;
+  // Error banner rendered within layout
 
   const filteredBillers = billers.filter(b => 
     b.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -94,6 +95,14 @@ export default function Billers() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg flex items-center justify-between">
+          <div className="text-sm text-red-700 font-medium">{error}</div>
+          <button onClick={fetchBillers} className="text-xs bg-red-100 hover:bg-red-200 text-red-800 font-semibold px-3 py-1.5 rounded">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Plan Limit Banner */}
       {isBasePlan && (
         <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg flex items-start gap-3">
@@ -103,7 +112,7 @@ export default function Billers() {
           </div>
         </div>
       )}
-      {isProPlan && billers.length >= 3 && (
+      {isProPlan && staffAccounts.length >= 3 && (
         <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">

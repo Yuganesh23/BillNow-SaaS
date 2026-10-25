@@ -168,9 +168,6 @@ public class BillerService {
             throw new RuntimeException("Owner is not associated with a shop");
         }
 
-        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
-        entitlementService.assertCanCreateBiller(shop);
-
         // 3. Get billers
         java.util.List<BillerResponse_Dto> responses = new java.util.ArrayList<>();
         
