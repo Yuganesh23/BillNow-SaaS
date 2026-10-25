@@ -32,6 +32,7 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final ShopContextResolver shopContextResolver;
     private final CustomerRepository customerRepository;
+    private final com.example.Billing.subscription.SubscriptionEntitlementService entitlementService;
     private final ProductRepository productRepository;
     private final com.example.Billing.invoice.pdf.InvoicePdfService invoicePdfService;
 
@@ -315,7 +316,7 @@ public class InvoiceService {
         // =================================================
         // SEND LOW STOCK EMAIL ALERT TO SHOP OWNER
         // =================================================
-        if (!lowStockAlerts.isEmpty()) {
+        if (!lowStockAlerts.isEmpty() && entitlementService.canSendLowStockAlert(shop)) {
             String shopEmail = shop.getEmail();
             if (shopEmail != null && !shopEmail.isBlank()) {
                 try {

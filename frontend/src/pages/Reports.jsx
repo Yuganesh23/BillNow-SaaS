@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, Tag, CreditCard, Smartphone, Banknote, ArrowRight, X, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, FileText, Tag, CreditCard, Smartphone, Banknote, ArrowRight, X, Calendar, Download, Lock } from 'lucide-react';
+import { useBranch } from '../context/BranchContext';
+import axiosClient from '../api/axiosClient';
 import { getSalesReport, getProductsReport, getCustomersReport, getPaymentsReport, getNewCustomersReport } from '../api/reportApi';
 
 export default function Reports() {
@@ -10,6 +12,58 @@ export default function Reports() {
   const [newCustomersReport, setNewCustomersReport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
+  const { branches, activeBranchId } = useBranch();
+  const currentBranch = branches.find(b => b.id.toString() === activeBranchId);
+  const isEnterprise = currentBranch?.subscriptionTier === 'ENTERPRISE' || currentBranch?.subscriptionTier === 'TRIAL';
+  const [exportingGst, setExportingGst] = useState(false);
+
+  const handleExportGst = async () => {
+    if (!isEnterprise) {
+      alert("GST Excel export is an ENTERPRISE plan benefit.\n\nPlease upgrade to ENTERPRISE in the Subscription page to export comprehensive GST tax spreadsheets.");
+      return;
+    }
+
+    try {
+      setExportingGst(true);
+      let startDate = '2020-01-01';
+      let endDate = todayStr;
+
+      if (timeFilter === 'DAILY') {
+        startDate = selectedDate || todayStr;
+        endDate = selectedDate || todayStr;
+      } else if (timeFilter === 'WEEKLY') {
+        startDate = weekFrom || sevenDaysAgoStr;
+        endDate = weekTo || todayStr;
+      } else if (timeFilter === 'MONTHLY') {
+        const [year, month] = (selectedMonth || currentMonthStr).split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        startDate = formatDateStr(firstDay);
+        endDate = formatDateStr(lastDay);
+      }
+
+      const response = await axiosClient.get('/reports/gst/export', {
+        params: { from: startDate, to: endDate },
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GST_Report_${startDate}_to_${endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export GST report', err);
+      const msg = err.response?.data?.message || 'Failed to export GST report. Please ensure your subscription includes GST Excel exports.';
+      alert(msg);
+    } finally {
+      setExportingGst(false);
+    }
+  };
 
   const formatDateStr = (date) => {
     const y = date.getFullYear();
@@ -196,6 +250,30 @@ export default function Reports() {
               />
             </div>
           )}
+
+          {/* GST Excel Export Button */}
+          <button
+            onClick={handleExportGst}
+            disabled={exportingGst}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+              isEnterprise
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+            }`}
+            title={isEnterprise ? "Export GST Invoices for Microsoft Excel" : "ENTERPRISE Feature: Click to learn more"}
+          >
+            {isEnterprise ? (
+              <Download className="w-4 h-4" />
+            ) : (
+              <Lock className="w-4 h-4 text-amber-600" />
+            )}
+            {exportingGst ? 'Exporting...' : 'Export GST (Excel)'}
+            {!isEnterprise && (
+              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">
+                Enterprise
+              </span>
+            )}
+          </button>
 
           {loading && (
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>

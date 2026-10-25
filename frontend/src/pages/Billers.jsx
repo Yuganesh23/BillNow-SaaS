@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getBillers, createBiller, deactivateBiller, updateBiller } from '../api/billerApi';
 import { EmptyState, LoadingState } from '../components/common/States';
-import { UserCog, Plus, Search, UserMinus, Edit2 } from 'lucide-react';
+import { UserCog, Plus, Search, UserMinus, Edit2, ShieldAlert, Lock } from 'lucide-react';
+import { useBranch } from '../context/BranchContext';
 import { Link } from 'react-router-dom';
 
 export default function Billers() {
@@ -14,6 +15,12 @@ export default function Billers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBiller, setEditingBiller] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', mobileNumber: '', password: '' });
+  const { branches, activeBranchId } = useBranch();
+  const currentBranch = branches.find(b => b.id.toString() === activeBranchId);
+  const planTier = currentBranch?.subscriptionTier || 'TRIAL';
+  const isBasePlan = planTier === 'BASE';
+  const isProPlan = planTier === 'PRO';
+  const isAtStaffLimit = isBasePlan || (isProPlan && billers.length >= 3);
 
   const fetchBillers = async () => {
     try {
@@ -32,6 +39,14 @@ export default function Billers() {
   }, []);
 
   const handleOpenModal = (biller = null) => {
+    if (!biller && isBasePlan) {
+      alert("Staff accounts are not included in the BASE plan (1 Administrator only).\n\nPlease upgrade to PRO in the Subscription tab to add up to 3 staff members.");
+      return;
+    }
+    if (!biller && isProPlan && billers.length >= 3) {
+      alert("You have reached the limit of 3 staff accounts on the PRO plan.\n\nPlease upgrade to ENTERPRISE in the Subscription tab for unlimited staff accounts.");
+      return;
+    }
     if (biller) {
       setEditingBiller(biller);
       setFormData({ name: biller.name, email: biller.email, mobileNumber: biller.mobileNumber || '', password: '' });
@@ -79,6 +94,24 @@ export default function Billers() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      {/* Plan Limit Banner */}
+      {isBasePlan && (
+        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg flex items-start gap-3">
+          <Lock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <span className="font-semibold">BASE Plan (1 Admin Only):</span> Staff accounts are not available on the BASE tier. <Link to="/subscription" className="font-bold underline text-amber-900 ml-1">Upgrade to PRO</Link> to add up to 3 staff accounts.
+          </div>
+        </div>
+      )}
+      {isProPlan && billers.length >= 3 && (
+        <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <span className="font-semibold">PRO Plan Staff Limit:</span> 3 of 3 staff accounts used. <Link to="/subscription" className="font-bold underline text-blue-900 ml-1">Upgrade to ENTERPRISE</Link> for unlimited staff.
+          </div>
+        </div>
+      )}
+
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Billers</h1>

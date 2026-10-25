@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
 import { Lock, ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
+import BrandLogo from '../components/common/BrandLogo';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -53,12 +54,12 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-2xl">B</span>
-          </div>
+        <div className="flex justify-center mb-6">
+          <Link to="/login" className="inline-flex hover:opacity-90 transition-opacity" title="Back to XenBill">
+            <BrandLogo size="lg" theme="dark" />
+          </Link>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
+        <h2 className="text-center text-3xl font-extrabold text-slate-900">
           Set New Password
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">

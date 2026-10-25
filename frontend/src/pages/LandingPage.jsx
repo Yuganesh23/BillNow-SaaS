@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogo from '../components/common/BrandLogo';
 
 export default function LandingPage() {
   return (
@@ -10,7 +11,7 @@ export default function LandingPage() {
           <div className="flex lg:flex-1">
             <a href="#" className="-m-1.5 p-1.5">
               <span className="sr-only">XenBill</span>
-              <span className="text-2xl font-bold text-indigo-600">XenBill</span>
+              <BrandLogo size="md" theme="dark" />
             </a>
           </div>
           <div className="flex lg:hidden">
@@ -125,7 +126,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-              <span className="text-2xl font-bold text-white tracking-tight">XenBill</span>
+              <BrandLogo size="md" theme="light" />
               <p className="text-sm mt-1 text-slate-400">The Fastest Billing & Inventory SaaS for Retail & Wholesale</p>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">

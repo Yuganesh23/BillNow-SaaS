@@ -182,6 +182,26 @@ public class ReportController {
     }
 
     // =====================================================
+
+    // =====================================================
+    // GST EXCEL / CSV REPORT EXPORT
+    // =====================================================
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @GetMapping("/gst/export")
+    public ResponseEntity<byte[]> exportGstReport(
+            Authentication authentication,
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        User_entity user = getAuthenticatedUser(authentication);
+        byte[] csvData = reportService.exportGstReport(user, from, to);
+        String filename = "GST_Report_" + from + "_to_" + to + ".csv";
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csvData);
+    }
+
     // AUTHENTICATED USER
     // =====================================================
 

@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { Building2 } from 'lucide-react';
+import BrandLogo from '../common/BrandLogo';
 import { 
   LayoutDashboard, 
   Package, 
@@ -59,7 +60,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200">
-          <span className="text-xl font-bold text-indigo-600">XenBill</span>
+          <BrandLogo size="sm" theme="dark" />
           <button onClick={() => setMobileOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-700">
             <X size={24} />
           </button>

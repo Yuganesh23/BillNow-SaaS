@@ -27,4 +27,7 @@ public interface InvoiceRepository  extends JpaRepository<Invoice_entity, Long> 
 
     @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM Invoice_entity i WHERE i.biller.id = :billerId AND i.shop.id = :shopId")
     BigDecimal sumTotalAmountByBillerIdAndShopId(@Param("billerId") Long billerId, @Param("shopId") Long shopId);
+
+    @Query("SELECT i FROM Invoice_entity i LEFT JOIN FETCH i.customer c LEFT JOIN FETCH i.biller b WHERE i.shop.id = :shopId AND i.status <> com.example.Billing.invoice.InvoiceStatus.CANCELLED AND i.createdAt >= :from AND i.createdAt < :to ORDER BY i.createdAt DESC")
+    List<Invoice_entity> findGstInvoicesForExport(@Param("shopId") Long shopId, @Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

@@ -860,26 +860,22 @@ public class SaaSSubscriptionService {
         }
 
         boolean isAnnual = "ANNUAL".equalsIgnoreCase(request.getBillingCycle()) || "YEARLY".equalsIgnoreCase(request.getBillingCycle());
+        String tierUpper = request.getTier() != null ? request.getTier().toUpperCase() : "BASE";
         long amountInPaise;
-        if (request.getAmount() != null && request.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-            amountInPaise = request.getAmount().multiply(new BigDecimal(100)).longValue();
+        if (isAnnual) {
+            amountInPaise = switch (tierUpper) {
+                case "BASE" -> 499900L;       // ₹4,999 / year
+                case "PRO" -> 999900L;        // ₹9,999 / year
+                case "ENTERPRISE" -> 2499000L; // ₹24,990 / year
+                default -> throw new IllegalArgumentException("Invalid subscription tier: " + request.getTier());
+            };
         } else {
-            String tierUpper = request.getTier().toUpperCase();
-            if (isAnnual) {
-                amountInPaise = switch (tierUpper) {
-                    case "BASE" -> 499900L;
-                    case "PRO" -> 999900L;
-                    case "ENTERPRISE" -> 2499000L;
-                    default -> 499900L;
-                };
-            } else {
-                amountInPaise = switch (tierUpper) {
-                    case "BASE" -> 49900L;
-                    case "PRO" -> 99900L;
-                    case "ENTERPRISE" -> 249900L;
-                    default -> 49900L;
-                };
-            }
+            amountInPaise = switch (tierUpper) {
+                case "BASE" -> 49900L;        // ₹499 / month
+                case "PRO" -> 99900L;         // ₹999 / month
+                case "ENTERPRISE" -> 249900L;  // ₹2,499 / month
+                default -> throw new IllegalArgumentException("Invalid subscription tier: " + request.getTier());
+            };
         }
 
         try {
@@ -950,11 +946,21 @@ public class SaaSSubscriptionService {
             throw new RuntimeException("Invalid payment signature: " + e.getMessage(), e);
         }
 
+        // Check idempotency: avoid double processing if payment was already verified
+        if (processedWebhookEventRepository.existsByEventId(request.getRazorpayPaymentId())) {
+            log.info("Payment {} already processed. Returning existing shop.", request.getRazorpayPaymentId());
+            return shop;
+        }
+
         // Upgrade shop tier and grant access (365 days for ANNUAL, 30 days for MONTHLY)
         boolean isAnnual = "ANNUAL".equalsIgnoreCase(request.getBillingCycle()) || "YEARLY".equalsIgnoreCase(request.getBillingCycle());
         SubscriptionTier newTier = SubscriptionTier.valueOf(request.getTier().toUpperCase());
         shop.setSubscriptionTier(newTier);
-        shop.setSubscriptionEndsAt(LocalDateTime.now().plusDays(isAnnual ? 365 : 30));
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentExpiry = shop.getSubscriptionEndsAt();
+        LocalDateTime baseTime = (currentExpiry != null && currentExpiry.isAfter(now)) ? currentExpiry : now;
+        shop.setSubscriptionEndsAt(baseTime.plusDays(isAnnual ? 365 : 30));
         shop.setActive(true);
 
         Shop_entity savedShop = shopRepository.save(shop);

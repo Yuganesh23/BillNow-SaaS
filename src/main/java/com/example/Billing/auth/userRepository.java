@@ -18,4 +18,9 @@ public interface userRepository
             Long shopId,
             String role
     );
+
+    long countByShopIdAndRole(
+            Long shopId,
+            String role
+    );
 }

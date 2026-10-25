@@ -13,4 +13,5 @@ public interface ShopRepository extends JpaRepository<Shop_entity, Long> {
 
     List<Shop_entity> findByOwnerId(Long ownerId);
 
+    long countByOwnerId(Long ownerId);
 }

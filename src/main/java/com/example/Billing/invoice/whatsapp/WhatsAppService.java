@@ -7,6 +7,7 @@ import com.example.Billing.invoice.Invoice_entity;
 import com.example.Billing.invoice.pdf.InvoicePdfService;
 import com.example.Billing.shop.ShopWhatsAppConfig;
 import com.example.Billing.shop.ShopWhatsAppConfigRepository;
+import com.example.Billing.subscription.SubscriptionEntitlementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,7 @@ public class WhatsAppService {
     private final InvoicePdfService invoicePdfService;
     private final ShopWhatsAppConfigRepository configRepository;
     private final WhatsAppStatusService whatsappStatusService;
+    private final SubscriptionEntitlementService entitlementService;
 
     // =====================================================
     // PROVIDER SELECTION
@@ -106,6 +108,9 @@ public class WhatsAppService {
         if (shop == null || shop.getId() == null) {
             throw new RuntimeException("User is not associated with a valid shop");
         }
+
+        // Enforce subscription entitlement: WhatsApp is available on PRO and ENTERPRISE plans
+        entitlementService.assertCanUseWhatsApp(shop);
 
         Long shopId = shop.getId();
 

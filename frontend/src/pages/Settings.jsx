@@ -145,7 +145,17 @@ export default function Settings() {
           <p className="mt-2 text-sm text-slate-700">Manage your profile and business branches.</p>
         </div>
         {user?.role === 'SHOP_OWNER' && (
-          <button onClick={() => setShowAddShop(true)} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <button 
+            onClick={() => {
+              const hasEnterprise = shops.some(s => s.subscriptionTier === 'ENTERPRISE');
+              if (shops.length >= 1 && !hasEnterprise) {
+                alert("Multi-branch management is an ENTERPRISE plan benefit.\n\nYour current plan supports 1 primary branch. Please upgrade to ENTERPRISE in the Subscription tab to add multiple branches.");
+                return;
+              }
+              setShowAddShop(true);
+            }} 
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
             <Plus className="w-5 h-5 mr-2 -ml-1" /> Add New Branch
           </button>
         )}

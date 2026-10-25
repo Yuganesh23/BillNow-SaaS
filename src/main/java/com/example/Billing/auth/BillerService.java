@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.Billing.config.ShopContextResolver;
 import com.example.Billing.invoice.InvoiceRepository;
+import com.example.Billing.subscription.SubscriptionEntitlementService;
 import java.math.BigDecimal;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class BillerService {
     private final ShopContextResolver shopContextResolver;
     private final PasswordEncoder passwordEncoder;
     private final InvoiceRepository invoiceRepository;
+    private final SubscriptionEntitlementService entitlementService;
 
 
     // =========================================================
@@ -42,10 +44,11 @@ public class BillerService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
-            throw new RuntimeException(
-                    "Owner is not associated with a shop"
-            );
+            throw new RuntimeException("Owner is not associated with a shop");
         }
+
+        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
+        entitlementService.assertCanCreateBiller(shop);
 
         // 3. Check email
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -98,9 +101,13 @@ public class BillerService {
 
         // 2. Get owner's shop
         Shop_entity shop = shopContextResolver.resolveActiveShop(owner);
+
         if (shop == null) {
             throw new RuntimeException("Owner is not associated with a shop");
         }
+
+        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
+        entitlementService.assertCanCreateBiller(shop);
 
         // 3. Find biller
         User_entity biller = userRepository.findById(billerId)
@@ -158,10 +165,11 @@ public class BillerService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
-            throw new RuntimeException(
-                    "Owner is not associated with a shop"
-            );
+            throw new RuntimeException("Owner is not associated with a shop");
         }
+
+        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
+        entitlementService.assertCanCreateBiller(shop);
 
         // 3. Get billers
         java.util.List<BillerResponse_Dto> responses = new java.util.ArrayList<>();
@@ -199,10 +207,11 @@ public class BillerService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
-            throw new RuntimeException(
-                    "Owner is not associated with a shop"
-            );
+            throw new RuntimeException("Owner is not associated with a shop");
         }
+
+        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
+        entitlementService.assertCanCreateBiller(shop);
 
         // 3. Find biller
         User_entity biller = userRepository
@@ -263,10 +272,11 @@ public class BillerService {
         Shop_entity shop = shopContextResolver.resolveActiveShop(owner);
 
         if (shop == null) {
-            throw new RuntimeException(
-                    "Owner is not associated with a shop"
-            );
+            throw new RuntimeException("Owner is not associated with a shop");
         }
+
+        // Enforce subscription plan limits for billers (BASE: 0, PRO: 3, ENTERPRISE: unlimited)
+        entitlementService.assertCanCreateBiller(shop);
 
         // 3. Find biller
         User_entity biller = userRepository

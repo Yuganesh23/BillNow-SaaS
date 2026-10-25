@@ -2,6 +2,7 @@ package com.example.Billing.shop;
 
 import com.example.Billing.auth.User_entity;
 import com.example.Billing.auth.userRepository;
+import com.example.Billing.subscription.SubscriptionEntitlementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,7 @@ public class ShopController {
 
     private final ShopRepository shopRepository;
     private final userRepository userRepository;
+    private final SubscriptionEntitlementService entitlementService;
 
     @PreAuthorize("hasRole('SHOP_OWNER')")
     @GetMapping
@@ -35,6 +37,9 @@ public class ShopController {
     ) {
         User_entity userDetails = (User_entity) authentication.getPrincipal();
         User_entity owner = userRepository.findById(userDetails.getId()).orElseThrow();
+
+        // Enforce subscription plan limits (ENTERPRISE required for multi-branch)
+        entitlementService.assertCanCreateBranch(owner);
 
         Shop_entity newShop = Shop_entity.builder()
                 .name(request.getName())

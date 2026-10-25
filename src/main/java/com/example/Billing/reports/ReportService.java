@@ -21,6 +21,8 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final ShopContextResolver shopContextResolver;
+    private final com.example.Billing.invoice.InvoiceRepository invoiceRepository;
+    private final com.example.Billing.subscription.SubscriptionEntitlementService entitlementService;
 
 
     // =====================================================
@@ -349,5 +351,60 @@ public class ReportService {
 
 
         return shopContextResolver.resolveActiveShop(user);
+    }
+
+    // =====================================================
+    // GST EXCEL / CSV REPORT EXPORT (ENTERPRISE TIER)
+    // =====================================================
+    public byte[] exportGstReport(User_entity user, LocalDate from, LocalDate to) {
+        Shop_entity shop = getUserShop(user);
+        validateDates(from, to);
+        entitlementService.assertCanExportGstExcel(shop);
+
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.plusDays(1).atStartOfDay();
+
+        List<com.example.Billing.invoice.Invoice_entity> invoices =
+                invoiceRepository.findGstInvoicesForExport(shop.getId(), start, end);
+
+        StringBuilder csv = new StringBuilder();
+        // UTF-8 BOM for automatic Microsoft Excel column detection
+        csv.append('\uFEFF');
+        // CSV Headers
+        csv.append("Invoice Number,Invoice Date,Customer Name,Customer Phone,Customer GSTIN,Biller Name,Subtotal,Discount Amount,Taxable Amount,CGST,SGST,IGST,Total Tax,Total Amount,Inter-State,Status\n");
+
+        for (com.example.Billing.invoice.Invoice_entity inv : invoices) {
+            String invNum = escapeCsv(inv.getInvoiceNumber());
+            String date = inv.getCreatedAt() != null ? inv.getCreatedAt().toLocalDate().toString() : "";
+            String custName = inv.getCustomer() != null ? escapeCsv(inv.getCustomer().getName()) : "";
+            String custPhone = inv.getCustomer() != null ? escapeCsv(inv.getCustomer().getWhatsappNumber()) : "";
+            String custGstin = inv.getCustomer() != null ? escapeCsv(inv.getCustomer().getGstin()) : "";
+            String billerName = inv.getBiller() != null ? escapeCsv(inv.getBiller().getName()) : "";
+            BigDecimal subtotal = inv.getSubtotal() != null ? inv.getSubtotal() : BigDecimal.ZERO;
+            BigDecimal discount = inv.getDiscountAmount() != null ? inv.getDiscountAmount() : BigDecimal.ZERO;
+            BigDecimal taxable = inv.getTaxableAmount() != null ? inv.getTaxableAmount() : BigDecimal.ZERO;
+            BigDecimal cgst = inv.getCgstTotal() != null ? inv.getCgstTotal() : BigDecimal.ZERO;
+            BigDecimal sgst = inv.getSgstTotal() != null ? inv.getSgstTotal() : BigDecimal.ZERO;
+            BigDecimal igst = inv.getIgstTotal() != null ? inv.getIgstTotal() : BigDecimal.ZERO;
+            BigDecimal totalTax = cgst.add(sgst).add(igst);
+            BigDecimal totalAmount = inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO;
+            boolean interState = Boolean.TRUE.equals(inv.getIsInterState());
+            String status = inv.getStatus() != null ? inv.getStatus().name() : "";
+
+            csv.append(String.format("%s,%s,%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s\n",
+                    invNum, date, custName, custPhone, custGstin, billerName,
+                    subtotal, discount, taxable, cgst, sgst, igst, totalTax, totalAmount,
+                    interState ? "YES" : "NO", status));
+        }
+
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private String escapeCsv(String val) {
+        if (val == null) return "";
+        if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
+            return "\"" + val.replace("\"", "\"\"") + "\"";
+        }
+        return val;
     }
 }

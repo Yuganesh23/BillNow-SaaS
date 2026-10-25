@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, LogIn, Eye, EyeOff, TrendingUp, Users, Zap } from 'lucide-react';
+import BrandLogo from '../components/common/BrandLogo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
