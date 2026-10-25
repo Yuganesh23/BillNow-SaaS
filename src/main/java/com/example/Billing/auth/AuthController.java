@@ -139,11 +139,19 @@ public class AuthController {
     public ResponseEntity<java.util.Map<String, String>> forgotPassword(
             @RequestBody java.util.Map<String, String> request
     ) {
-        String email = request.get("email");
-        authService.forgotPassword(email);
-        java.util.Map<String, String> response = new java.util.HashMap<>();
-        response.put("message", "OTP sent to email");
-        return ResponseEntity.ok(response);
+        try {
+            String email = request.get("email");
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Email address is required"));
+            }
+            authService.forgotPassword(email.trim());
+            return ResponseEntity.ok(java.util.Map.of("message", "Password reset link and OTP sent to " + email));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to send reset email"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/reset-password")
@@ -152,9 +160,14 @@ public class AuthController {
             @RequestBody
             ResetPasswordRequest_Dto request
     ) {
-        authService.resetPassword(request);
-        java.util.Map<String, String> response = new java.util.HashMap<>();
-        response.put("message", "Password reset successfully");
-        return ResponseEntity.ok(response);
+        try {
+            authService.resetPassword(request);
+            return ResponseEntity.ok(java.util.Map.of("message", "Password reset successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid or expired reset code"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
     }
 }

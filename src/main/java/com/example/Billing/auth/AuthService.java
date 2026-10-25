@@ -324,12 +324,20 @@ public class AuthService {
         boolean valid = false;
         if (expectedOtp != null && expectedOtp.equals(code)) {
             valid = true;
-        } else if (user.getMobileNumber() != null && user.getMobileNumber().equals(request.getMobileNumber())) {
-            valid = true;
+        } else if (user.getMobileNumber() != null && code != null) {
+            String dbDigits = user.getMobileNumber().replaceAll("\\D", "");
+            String inputDigits = code.replaceAll("\\D", "");
+            if (!inputDigits.isEmpty()) {
+                String dbLast10 = dbDigits.length() >= 10 ? dbDigits.substring(dbDigits.length() - 10) : dbDigits;
+                String inputLast10 = inputDigits.length() >= 10 ? inputDigits.substring(inputDigits.length() - 10) : inputDigits;
+                if (!dbLast10.isEmpty() && dbLast10.equals(inputLast10)) {
+                    valid = true;
+                }
+            }
         }
 
         if (!valid) {
-            throw new RuntimeException("Invalid or expired verification code");
+            throw new RuntimeException("Invalid verification code or mobile number. Please check your details or request a new reset code.");
         }
         
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
