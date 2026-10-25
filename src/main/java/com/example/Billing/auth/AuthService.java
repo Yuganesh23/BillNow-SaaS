@@ -315,7 +315,10 @@ public class AuthService {
         userRepository.save(user);
 
         String resetUrl = "https://xenbill.web.app/reset-password?token=" + token;
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetUrl);
+        boolean sent = emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetUrl);
+        if (!sent) {
+            throw new RuntimeException("Failed to dispatch email via Resend. Please ensure RESEND_API_KEY is configured on Cloud Run.");
+        }
     }
 
     @Transactional
