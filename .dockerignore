@@ -1,0 +1,13 @@
+﻿.git
+.github
+.idea
+.vscode
+frontend
+outputs
+work
+target
+*.log
+.env*
+.neon
+*.db
+node_modules

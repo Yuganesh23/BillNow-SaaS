@@ -203,6 +203,31 @@ public class InvoiceController {
         );
     }
 
+    // =====================================================
+    // SEND INVOICE PDF TO EMAIL
+    // OWNER + BILLER
+    // =====================================================
+
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'BILLER')")
+    @PostMapping("/{invoiceId}/send-email")
+    public ResponseEntity<String> sendInvoiceToEmail(
+            Authentication authentication,
+            @PathVariable Long invoiceId
+    ) {
+
+        User_entity user =
+                getAuthenticatedUser(authentication);
+
+        invoiceService.sendInvoiceEmail(
+                user,
+                invoiceId
+        );
+
+        return ResponseEntity.ok(
+                "Invoice PDF sent successfully to customer email"
+        );
+    }
+
 
     // =====================================================
     // AUTHENTICATED USER

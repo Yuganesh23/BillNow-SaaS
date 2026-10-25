@@ -33,6 +33,7 @@ public class InvoiceService {
     private final ShopContextResolver shopContextResolver;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
+    private final com.example.Billing.invoice.pdf.InvoicePdfService invoicePdfService;
 
 
     // =====================================================
@@ -190,6 +191,7 @@ public class InvoiceService {
         BigDecimal totalCgst = BigDecimal.ZERO;
         BigDecimal totalSgst = BigDecimal.ZERO;
         BigDecimal totalIgst = BigDecimal.ZERO;
+        List<String> lowStockAlerts = new ArrayList<>();
 
         for (InvoiceItemRequest_Dto itemRequest : request.getItems()) {
             if (itemRequest == null || itemRequest.getProductId() == null) {
@@ -260,6 +262,12 @@ public class InvoiceService {
             if (updated == 0) {
                 throw new RuntimeException("Insufficient stock or concurrency conflict for product: " + product.getName());
             }
+
+            double remainingStock = (product.getStockQuantity() != null ? product.getStockQuantity() : 0.0) - requestedQuantity;
+            double threshold = (product.getLowStockThreshold() != null) ? product.getLowStockThreshold() : 10.0;
+            if (remainingStock <= threshold) {
+                lowStockAlerts.add(product.getName() + " (Remaining: " + (int) remainingStock + ", Min Alert: " + (int) threshold + ")");
+            }
         }
 
         // =================================================
@@ -304,6 +312,19 @@ public class InvoiceService {
                         invoice
                 );
 
+        // =================================================
+        // SEND LOW STOCK EMAIL ALERT TO SHOP OWNER
+        // =================================================
+        if (!lowStockAlerts.isEmpty()) {
+            String shopEmail = shop.getEmail();
+            if (shopEmail != null && !shopEmail.isBlank()) {
+                try {
+                    emailService.sendLowStockAlertEmail(shopEmail, shop.getName(), lowStockAlerts);
+                } catch (Exception e) {
+                    System.err.println("Failed to send low stock alert email: " + e.getMessage());
+                }
+            }
+        }
 
         return mapToResponse(
                 savedInvoice
@@ -610,9 +631,46 @@ public class InvoiceService {
     }
 
 
+
+    // =====================================================
+    // SEND INVOICE PDF TO EMAIL
+    // =====================================================
+    public void sendInvoiceEmail(User_entity user, Long invoiceId) {
+        if (user == null) {
+            throw new RuntimeException("User is not authenticated");
+        }
+
+        var shop = shopContextResolver.resolveActiveShop(user);
+        if (shop == null || shop.getId() == null) {
+            throw new RuntimeException("User is not associated with a valid shop");
+        }
+
+        Invoice_entity invoice = invoiceRepository
+                .findByIdAndShopId(invoiceId, shop.getId())
+                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        if (invoice.getCustomer() == null) {
+            throw new RuntimeException("Invoice customer is missing");
+        }
+
+        String customerEmail = invoice.getCustomer().getEmail();
+        if (customerEmail == null || customerEmail.trim().isEmpty()) {
+            throw new RuntimeException("Customer has no email address configured. Please update customer details.");
+        }
+
+        byte[] pdf = invoicePdfService.generateInvoicePdf(user, invoiceId);
+        if (pdf == null || pdf.length == 0) {
+            throw new RuntimeException("Failed to generate invoice PDF");
+        }
+
+        emailService.sendInvoiceEmail(customerEmail.trim(), invoice.getInvoiceNumber(), pdf, shop.getName());
+    }
+
+
     // =====================================================
     // MAPPER
     // =====================================================
+
 
     private InvoiceResponse_Dto mapToResponse(
             Invoice_entity invoice
@@ -673,6 +731,8 @@ public class InvoiceService {
                 .customerId(invoice.getCustomer().getId())
                 .customerName(invoice.getCustomer().getName())
                 .customerWhatsapp(invoice.getCustomer().getWhatsappNumber())
+                .customerEmail(invoice.getCustomer() != null ? invoice.getCustomer().getEmail() : null)
+                .customerAddress(invoice.getCustomer() != null ? invoice.getCustomer().getAddress() : null)
                 .invoiceNumber(invoice.getInvoiceNumber())
                 .subtotal(invoice.getSubtotal())
                 .discountAmount(invoice.getDiscountAmount())

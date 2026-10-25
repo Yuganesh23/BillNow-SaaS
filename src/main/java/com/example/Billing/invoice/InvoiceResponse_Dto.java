@@ -1,10 +1,8 @@
 package com.example.Billing.invoice;
 
 import java.math.BigDecimal;
-
 import com.example.Billing.invoice.whatsapp.WhatsAppStatus;
 import lombok.*;
-
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +22,7 @@ public class InvoiceResponse_Dto {
 
     private String customerName;
     private String customerWhatsapp;
+    private String customerEmail;
     private String customerAddress;
 
     private String invoiceNumber;
@@ -36,7 +35,7 @@ public class InvoiceResponse_Dto {
 
     private InvoiceStatus status;
 
-        private LocalDateTime createdAt;
+    private LocalDateTime createdAt;
     
     private BigDecimal taxableAmount;
     private BigDecimal cgstTotal;
@@ -49,7 +48,6 @@ public class InvoiceResponse_Dto {
     private Long billerId;
 
     private String billerName;
-
 
     // =====================================================
     // WHATSAPP

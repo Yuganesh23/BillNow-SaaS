@@ -147,6 +147,15 @@ public class AuthService {
 
 
         // =================================================
+        // SEND WELCOME EMAIL (RESEND)
+        // =================================================
+        try {
+            emailService.sendWelcomeEmail(user.getEmail(), user.getName(), shop.getName());
+        } catch (Exception e) {
+            System.err.println("Failed to send welcome email: " + e.getMessage());
+        }
+
+        // =================================================
         // RETURN RESPONSE
         // =================================================
 
@@ -292,24 +301,35 @@ public class AuthService {
     
     public void forgotPassword(String email) {
         User_entity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
         
-        // Generate 6 digit OTP
+        // Generate 6-digit OTP
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         otpStorage.put(email, otp);
         
-        emailService.sendOtpEmail(email, otp);
+        String resetUrl = "https://xenbill.web.app/forgot-password?email=" + java.net.URLEncoder.encode(email, java.nio.charset.StandardCharsets.UTF_8) + "&code=" + otp;
+        emailService.sendPasswordResetEmail(email, user.getName(), resetUrl, otp);
     }
 
     public void resetPassword(ResetPasswordRequest_Dto request) {
         User_entity user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found with this email"));
                 
-        // In this upgraded version, we verify OTP instead of mobile number.
-        // We will assume `request.getMobileNumber()` is now actually passing the OTP for simplicity
         String expectedOtp = otpStorage.get(request.getEmail());
-        if (expectedOtp == null || !expectedOtp.equals(request.getMobileNumber())) {
-            throw new RuntimeException("Invalid or expired OTP");
+        String code = request.getToken();
+        if (code == null || code.isBlank()) {
+            code = request.getMobileNumber();
+        }
+
+        boolean valid = false;
+        if (expectedOtp != null && expectedOtp.equals(code)) {
+            valid = true;
+        } else if (user.getMobileNumber() != null && user.getMobileNumber().equals(request.getMobileNumber())) {
+            valid = true;
+        }
+
+        if (!valid) {
+            throw new RuntimeException("Invalid or expired verification code");
         }
         
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

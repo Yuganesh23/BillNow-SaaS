@@ -50,6 +50,7 @@ function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/terms" element={<LegalPolicies />} />
           <Route path="/privacy" element={<LegalPolicies />} />

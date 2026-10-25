@@ -11,8 +11,9 @@ public class ResetPasswordRequest_Dto {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "Mobile number is required")
     private String mobileNumber;
+
+    private String token;
 
     @NotBlank(message = "New password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")

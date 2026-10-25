@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInvoiceById } from '../api/invoiceApi';
 import { LoadingState } from '../components/common/States';
-import { ArrowLeft, Printer, Download, CreditCard } from 'lucide-react';
+import { ArrowLeft, Printer, Download, CreditCard, MessageCircle, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
@@ -31,6 +31,89 @@ export default function InvoiceDetails() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+
+
+  const handleEmail = async () => {
+    const email = invoice?.customerEmail || '';
+    if (!email || !email.includes('@')) {
+      setShareMessage('Customer does not have a valid email address. Please update customer details.');
+      return;
+    }
+
+    setSendingEmail(true);
+    setShareMessage('');
+    try {
+      const { default: axiosClient } = await import('../api/axiosClient');
+      const response = await axiosClient.post(`/invoices/${id}/send-email`);
+      const msg = typeof response.data === 'string'
+        ? response.data
+        : (response.data?.message || 'Invoice PDF sent successfully via Email!');
+      setShareMessage(String(msg));
+    } catch (err) {
+      console.error('Email send error:', err);
+      let errMsg = 'Email sending failed.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errMsg = err.response.data;
+        } else if (typeof err.response.data.message === 'string') {
+          errMsg = err.response.data.message;
+        } else if (typeof err.response.data.error === 'string') {
+          errMsg = err.response.data.error;
+        }
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setShareMessage(String(errMsg));
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleWhatsApp = async () => {
+    const rawNumber = invoice?.customerWhatsapp || '';
+    const digits = rawNumber.replace(/\D/g, '');
+
+    if (!digits) {
+      setShareMessage('Customer does not have a WhatsApp number. Please add one in Customers.');
+      return;
+    }
+
+    if (digits.length < 10) {
+      setShareMessage(`Invalid WhatsApp number "${rawNumber}". Indian numbers must be 10 digits (found ${digits.length} digits). Please update customer.`);
+      return;
+    }
+
+    setSendingWhatsApp(true);
+    setShareMessage('');
+    try {
+      const { default: axiosClient } = await import('../api/axiosClient');
+      const response = await axiosClient.post(`/invoices/${id}/send-whatsapp`);
+      const msg = typeof response.data === 'string'
+        ? response.data
+        : (response.data?.message || 'Invoice PDF sent successfully via WhatsApp!');
+      setShareMessage(String(msg));
+    } catch (err) {
+      console.error('WhatsApp send error:', err);
+      let errMsg = 'WhatsApp sending failed.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errMsg = err.response.data;
+        } else if (typeof err.response.data.message === 'string') {
+          errMsg = err.response.data.message;
+        } else if (typeof err.response.data.error === 'string') {
+          errMsg = err.response.data.error;
+        }
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setShareMessage(String(errMsg));
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -95,8 +178,36 @@ export default function InvoiceDetails() {
             <Download className="w-4 h-4 mr-2" />
             PDF
           </button>
+          <button 
+            type="button" 
+            onClick={handleWhatsApp} 
+            disabled={sendingWhatsApp} 
+            className="inline-flex items-center px-4 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 disabled:opacity-50"
+          >
+            <MessageCircle className="w-4 h-4 mr-2" />
+            {sendingWhatsApp ? 'Sending…' : 'WhatsApp'}
+          </button>
+          <button 
+            type="button" 
+            onClick={handleEmail} 
+            disabled={sendingEmail} 
+            className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50"
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            {sendingEmail ? 'Sending…' : 'Email'}
+          </button>
         </div>
       </div>
+
+      {shareMessage && (
+        <div className={`mb-4 rounded-md border px-4 py-3 text-sm print:hidden ${
+          String(shareMessage).toLowerCase().includes('success') 
+            ? 'border-green-200 bg-green-50 text-green-800' 
+            : 'border-amber-200 bg-amber-50 text-amber-800'
+        }`}>
+          {String(shareMessage)}
+        </div>
+      )}
 
       <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg p-6 print:shadow-none print:ring-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-200 pb-4 items-start">
@@ -123,6 +234,9 @@ export default function InvoiceDetails() {
               <p className="text-sm font-bold text-slate-900">{invoice.customerName}</p>
               {invoice.customerWhatsapp && (
                 <p className="text-xs text-slate-500 mt-1">WhatsApp: {invoice.customerWhatsapp}</p>
+              )}
+              {invoice.customerEmail && (
+                <p className="text-xs text-slate-500 mt-1">Email: {invoice.customerEmail}</p>
               )}
               <div className="mt-4 text-sm text-slate-500">
                 <p>Date: {invoice.createdAt ? format(new Date(invoice.createdAt), 'MMM dd, yyyy HH:mm a') : 'N/A'}</p>
