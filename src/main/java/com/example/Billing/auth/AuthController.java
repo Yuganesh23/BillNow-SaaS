@@ -145,7 +145,7 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(java.util.Map.of("message", "Email address is required"));
             }
             authService.forgotPassword(email.trim());
-            return ResponseEntity.ok(java.util.Map.of("message", "Password reset link and OTP sent to " + email));
+            return ResponseEntity.ok(java.util.Map.of("message", "Check your email. If an account exists for that address, you will receive a password reset link."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to send reset email"));
         } catch (Exception e) {

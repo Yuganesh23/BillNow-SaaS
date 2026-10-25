@@ -17,7 +17,7 @@ public class EmailService {
     @Value("${resend.api-key:${RESEND_API_KEY:}}")
     private String resendApiKey;
 
-    @Value("${resend.from-email:${RESEND_FROM_EMAIL:XenBill <billing@xenfirm.com>}}")
+    @Value("${resend.from-email:${RESEND_FROM_EMAIL:XenBill <noreply@xenfirm.com>}}")
     private String fromEmail;
 
     private RestClient getRestClient() {
@@ -30,7 +30,7 @@ public class EmailService {
     /**
      * Dispatch email via Resend's HTTPS REST API (Port 443 - zero firewall blocks on Cloud Run)
      */
-    public boolean sendEmailViaApi(String toEmail, String subject, String htmlContent, byte[] attachmentBytes, String attachmentName) {
+    public boolean sendEmailViaApi(String toEmail, String subject, String htmlContent, String textContent, byte[] attachmentBytes, String attachmentName) {
         if (toEmail == null || toEmail.isBlank()) {
             log.warn("Recipient email is blank; skipping send.");
             return false;
@@ -42,16 +42,20 @@ public class EmailService {
         }
 
         if (apiKey == null || apiKey.isBlank()) {
-            log.error("RESEND_API_KEY is not configured. Cannot send email to {}.", toEmail);
+            log.error("RESEND_API_KEY is not configured on the server. Cannot send email to {}.", toEmail);
             return false;
         }
 
         try {
             Map<String, Object> body = new HashMap<>();
-            body.put("from", fromEmail != null && !fromEmail.isBlank() ? fromEmail : "XenBill <billing@xenfirm.com>");
+            body.put("from", fromEmail != null && !fromEmail.isBlank() ? fromEmail : "XenBill <noreply@xenfirm.com>");
             body.put("to", Collections.singletonList(toEmail.trim()));
             body.put("subject", subject);
             body.put("html", htmlContent);
+
+            if (textContent != null && !textContent.isBlank()) {
+                body.put("text", textContent);
+            }
 
             if (attachmentBytes != null && attachmentBytes.length > 0 && attachmentName != null) {
                 Map<String, Object> attachment = new HashMap<>();
@@ -70,12 +74,16 @@ public class EmailService {
                     .retrieve()
                     .toEntity(String.class);
 
-            log.info("Email '{}' sent successfully to {} via Resend API (HTTP {})", subject, toEmail, response.getStatusCode());
+            log.info("Email '{}' dispatched successfully to recipient via Resend API (HTTP {})", subject, response.getStatusCode());
             return true;
         } catch (Exception e) {
-            log.error("Resend API failed to deliver email to {}: {}", toEmail, e.getMessage());
+            log.error("Resend API failed to deliver email: {}", e.getMessage());
             return false;
         }
+    }
+
+    public boolean sendEmailViaApi(String toEmail, String subject, String htmlContent, byte[] attachmentBytes, String attachmentName) {
+        return sendEmailViaApi(toEmail, subject, htmlContent, null, attachmentBytes, attachmentName);
     }
 
     // =========================================================================
@@ -85,6 +93,17 @@ public class EmailService {
     public boolean sendPasswordResetEmail(String toEmail, String userName, String resetUrl) {
         String displayName = (userName != null && !userName.isBlank()) ? userName : "Valued User";
         String link = (resetUrl != null && !resetUrl.isBlank()) ? resetUrl : "https://xenbill.web.app/forgot-password";
+
+        String subject = "Reset your XenBill password";
+
+        String textContent = "Hello " + displayName + ",\n\n"
+                + "We received a request to reset the password for your XenBill account (" + toEmail + ").\n\n"
+                + "Reset your password by clicking this link:\n" + link + "\n\n"
+                + "This password reset link is valid for 15 minutes.\n"
+                + "If you did not request a password reset, you can safely ignore this email.\n\n"
+                + "Best regards,\n"
+                + "XenBill Team\n"
+                + "https://xenbill.web.app";
 
         String htmlContent = "<!DOCTYPE html>"
                 + "<html><head><meta charset='UTF-8'></head><body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; background-color:#F8FAFC; margin:0; padding:24px; color:#1E293B;'>"
@@ -97,15 +116,15 @@ public class EmailService {
                 + "<p style='font-size:15px; line-height:1.6;'>Hello <strong>" + displayName + "</strong>,</p>"
                 + "<p style='font-size:14px; line-height:1.6; color:#475569;'>We received a request to reset the password for your XenBill account (<strong>" + toEmail + "</strong>). Click the button below to set a new password:</p>"
                 + "<div style='text-align:center; margin:32px 0;'>"
-                + "  <a href='" + link + "' style='background:#4F46E5; color:#ffffff; padding:14px 32px; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px; display:inline-block; box-shadow:0 4px 6px -1px rgba(79,70,229,0.3);'>Click Here to Set New Password</a>"
+                + "  <a href='" + link + "' style='background:#4F46E5; color:#ffffff; padding:14px 32px; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px; display:inline-block; box-shadow:0 4px 6px -1px rgba(79,70,229,0.3);'>Reset Password</a>"
                 + "</div>"
                 + "<p style='font-size:13px; color:#64748B; line-height:1.6;'>If the button does not work, copy and paste this link into your browser:<br/><a href='" + link + "' style='color:#4F46E5; word-break:break-all;'>" + link + "</a></p>"
-                + "<p style='font-size:12px; color:#94A3B8; line-height:1.5; margin-top:24px;'>This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this email.</p>"
+                + "<p style='font-size:12px; color:#94A3B8; line-height:1.5; margin-top:24px;'>This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this email.</p>"
                 + "<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'/>"
                 + "<p style='font-size:12px; color:#94A3B8; text-align:center; margin:0;'>XenBill &bull; <a href='https://xenbill.web.app' style='color:#4F46E5; text-decoration:none;'>xenbill.web.app</a></p>"
                 + "</div></body></html>";
 
-        return sendEmailViaApi(toEmail, "🔐 Reset Your XenBill Password", htmlContent, null, null);
+        return sendEmailViaApi(toEmail, subject, htmlContent, textContent, null, null);
     }
 
     public boolean sendPasswordResetEmail(String toEmail, String userName, String resetUrl, String otp) {
@@ -124,6 +143,17 @@ public class EmailService {
     public boolean sendWelcomeEmail(String toEmail, String ownerName, String shopName) {
         String displayName = (ownerName != null && !ownerName.isBlank()) ? ownerName : "Shop Owner";
         String storeTitle = (shopName != null && !shopName.isBlank()) ? shopName : "Your Shop";
+
+        String textContent = "Hello " + displayName + ",\n\n"
+                + "Congratulations on launching " + storeTitle + " on XenBill! Your account is now fully active with a 14-day free trial.\n\n"
+                + "Quick Next Steps:\n"
+                + "- Add Inventory: Add your products, HSN codes, and GST rates.\n"
+                + "- Create Invoices: Generate professional GST tax invoices in seconds.\n"
+                + "- Direct Sharing: Send bills directly to WhatsApp & Email.\n"
+                + "- Analytics: Monitor daily sales, profits, and top-selling goods.\n\n"
+                + "Open XenBill Dashboard: https://xenbill.web.app/dashboard\n\n"
+                + "Best regards,\n"
+                + "XenBill Team";
 
         String htmlContent = "<!DOCTYPE html>"
                 + "<html><head><meta charset='UTF-8'></head><body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; background-color:#F8FAFC; margin:0; padding:24px; color:#1E293B;'>"
@@ -152,7 +182,7 @@ public class EmailService {
                 + "<p style='font-size:12px; color:#94A3B8; text-align:center; margin:0;'>XenBill &bull; <a href='https://xenbill.web.app' style='color:#4F46E5; text-decoration:none;'>xenbill.web.app</a></p>"
                 + "</div></body></html>";
 
-        return sendEmailViaApi(toEmail, "🎉 Welcome to XenBill, " + shopName + "!", htmlContent, null, null);
+        return sendEmailViaApi(toEmail, "🎉 Welcome to XenBill, " + shopName + "!", htmlContent, textContent, null, null);
     }
 
     // =========================================================================
@@ -160,6 +190,13 @@ public class EmailService {
     // =========================================================================
 
     public boolean sendLowStockAlertEmail(String ownerEmail, String shopName, String productName, Double currentStock, Double threshold) {
+        String textContent = "Attention " + shopName + ",\n\n"
+                + "Low Stock Alert: " + productName + "\n"
+                + "Current Stock: " + currentStock + " units\n"
+                + "Minimum Alert Threshold: " + threshold + " units\n\n"
+                + "Manage inventory: https://xenbill.web.app/products\n\n"
+                + "Best regards,\nXenBill Inventory";
+
         String htmlContent = "<!DOCTYPE html>"
                 + "<html><head><meta charset='UTF-8'></head><body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; background-color:#F8FAFC; margin:0; padding:24px; color:#1E293B;'>"
                 + "<div style='max-width:540px; margin:0 auto; background:#FFFFFF; border-radius:12px; border:1px solid #E2E8F0; padding:32px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);'>"
@@ -182,16 +219,25 @@ public class EmailService {
                 + "<p style='font-size:12px; color:#94A3B8; text-align:center; margin:0;'>XenBill Cloud Inventory &bull; <a href='https://xenbill.web.app' style='color:#4F46E5; text-decoration:none;'>xenbill.web.app</a></p>"
                 + "</div></body></html>";
 
-        return sendEmailViaApi(ownerEmail, "⚠️ Low Stock Alert: " + productName + " (" + shopName + ")", htmlContent, null, null);
+        return sendEmailViaApi(ownerEmail, "⚠️ Low Stock Alert: " + productName + " (" + shopName + ")", htmlContent, textContent, null, null);
     }
 
     public boolean sendLowStockAlertEmail(String ownerEmail, String shopName, List<String> lowStockSummaries) {
         if (lowStockSummaries == null || lowStockSummaries.isEmpty()) return false;
 
         StringBuilder itemsHtml = new StringBuilder();
+        StringBuilder itemsText = new StringBuilder();
         for (String summary : lowStockSummaries) {
             itemsHtml.append("<li style='margin-bottom:6px;'>").append(summary).append("</li>");
+            itemsText.append("- ").append(summary).append("\n");
         }
+
+        String textContent = "Attention " + shopName + ",\n\n"
+                + "The following items have dropped below their minimum safety stock threshold:\n"
+                + itemsText.toString() + "\n"
+                + "Please restock soon to avoid running out of stock.\n"
+                + "Manage inventory: https://xenbill.web.app/products\n\n"
+                + "Best regards,\nXenBill Inventory";
 
         String htmlContent = "<!DOCTYPE html>"
                 + "<html><head><meta charset='UTF-8'></head><body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; background-color:#F8FAFC; margin:0; padding:24px; color:#1E293B;'>"
@@ -213,7 +259,7 @@ public class EmailService {
                 + "<p style='font-size:12px; color:#94A3B8; text-align:center; margin:0;'>XenBill Cloud Inventory &bull; <a href='https://xenbill.web.app' style='color:#4F46E5; text-decoration:none;'>xenbill.web.app</a></p>"
                 + "</div></body></html>";
 
-        return sendEmailViaApi(ownerEmail, "⚠️ Low Stock Alert: " + lowStockSummaries.size() + " Items Running Low (" + shopName + ")", htmlContent, null, null);
+        return sendEmailViaApi(ownerEmail, "⚠️ Low Stock Alert: " + lowStockSummaries.size() + " Items Running Low (" + shopName + ")", htmlContent, textContent, null, null);
     }
 
     // =========================================================================
@@ -229,7 +275,7 @@ public class EmailService {
                 + "<p>Please find attached your official Tax Invoice #" + invoiceNumber + ".</p>"
                 + "<p>Warm regards,<br/>" + senderTitle + "<br/>Powered by XenBill (https://xenbill.web.app)</p>";
 
-        return sendEmailViaApi(toEmail, subject, htmlContent, pdfBytes, "Invoice-" + invoiceNumber + ".pdf");
+        return sendEmailViaApi(toEmail, subject, htmlContent, null, pdfBytes, "Invoice-" + invoiceNumber + ".pdf");
     }
 
     public boolean sendInvoiceEmail(String toEmail, String invoiceNumber, byte[] pdfBytes) {

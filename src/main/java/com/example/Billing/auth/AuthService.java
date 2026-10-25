@@ -3,13 +3,25 @@ package com.example.Billing.auth;
 import com.example.Billing.shop.ShopRepository;
 import com.example.Billing.shop.Shop_entity;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.HexFormat;
+import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
+
+    @Value("${frontend.base-url:${FRONTEND_BASE_URL:https://xenbill.web.app}}")
+    private String frontendBaseUrl;
 
     private final userRepository userRepository;
     private final ShopRepository shopRepository;
@@ -299,55 +311,106 @@ public class AuthService {
     }
 
     
+    // =========================================================================
+    // PASSWORD RESET WITH CRYPTOGRAPHIC TOKEN HASHING
+    // =========================================================================
+
+    private String generateSecureToken() {
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+        return HexFormat.of().formatHex(randomBytes);
+    }
+
+    public String hashToken(String rawToken) {
+        if (rawToken == null) return null;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
+
     @Transactional
     public void forgotPassword(String email) {
         if (email == null || email.isBlank()) {
-            throw new RuntimeException("Email address is required");
+            return;
         }
 
-        User_entity user = userRepository.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new RuntimeException("No account registered with email: " + email));
+        Optional<User_entity> userOpt = userRepository.findByEmail(email.trim().toLowerCase());
+        if (userOpt.isEmpty()) {
+            // Avoid account enumeration: log and return generic success
+            log.info("Password reset requested for non-existent email: {}", email.trim());
+            return;
+        }
 
-        // Generate cryptographically secure token and save in database
-        String token = java.util.UUID.randomUUID().toString().replace("-", "");
-        user.setResetToken(token);
-        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+        User_entity user = userOpt.get();
+
+        // 1. Generate 32-byte cryptographically secure token (64 hex chars)
+        String rawToken = generateSecureToken();
+
+        // 2. Compute SHA-256 hash to store in DB
+        String tokenHash = hashToken(rawToken);
+
+        // 3. Invalidate previous token and set 15-minute expiry
+        user.setResetTokenHash(tokenHash);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
 
-        String resetUrl = "https://xenbill.web.app/reset-password?token=" + token;
+        // 4. Construct reset link using configured frontend URL
+        String baseUrl = (frontendBaseUrl != null && !frontendBaseUrl.isBlank())
+                ? frontendBaseUrl.replaceAll("/+$", "")
+                : "https://xenbill.web.app";
+        String resetUrl = baseUrl + "/reset-password?token=" + rawToken;
+
+        // 5. Deliver email via Resend
         boolean sent = emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetUrl);
         if (!sent) {
-            throw new RuntimeException("Failed to dispatch email via Resend. Please ensure RESEND_API_KEY is configured on Cloud Run.");
+            log.error("Failed to send password reset email to user id: {}", user.getId());
+            throw new RuntimeException("Failed to dispatch password reset email. Please try again later.");
         }
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest_Dto request) {
-        String token = request.getToken();
-        if (token == null || token.isBlank()) {
-            // Also support token passed in mobileNumber field from legacy forms
-            token = request.getMobileNumber();
+        if (request == null) {
+            throw new RuntimeException("Invalid password reset request");
         }
 
-        if (token == null || token.isBlank()) {
+        String rawToken = request.getToken();
+        if (rawToken == null || rawToken.isBlank()) {
             throw new RuntimeException("Password reset token is missing. Please click the reset link sent to your email.");
         }
 
-        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-            throw new RuntimeException("New password must be at least 6 characters long");
+        String newPassword = request.getNewPassword();
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters long.");
         }
 
-        User_entity user = userRepository.findByResetToken(token.trim())
+        // Hash incoming token to match stored SHA-256 hash
+        String tokenHash = hashToken(rawToken.trim());
+        User_entity user = userRepository.findByResetTokenHash(tokenHash)
                 .orElseThrow(() -> new RuntimeException("Invalid or expired password reset link. Please request a new one."));
 
-        if (user.getResetTokenExpiry() == null || java.time.LocalDateTime.now().isAfter(user.getResetTokenExpiry())) {
-            throw new RuntimeException("Password reset link has expired. Please request a new one.");
+        if (user.getResetTokenExpiry() == null || LocalDateTime.now().isAfter(user.getResetTokenExpiry())) {
+            throw new RuntimeException("Password reset link has expired. Please request a new reset link.");
         }
 
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setResetToken(null);
+        // Hash new password using BCrypt PasswordEncoder
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Single-use: immediately invalidate token in DB
+        user.setResetTokenHash(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
+        log.info("Password successfully updated for user id: {}", user.getId());
     }
 
 }

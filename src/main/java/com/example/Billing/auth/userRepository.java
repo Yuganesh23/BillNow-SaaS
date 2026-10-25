@@ -12,7 +12,7 @@ public interface userRepository
 
     boolean existsByEmail(String email);
 
-    Optional<User_entity> findByResetToken(String resetToken);
+    Optional<User_entity> findByResetTokenHash(String resetTokenHash);
 
     List<User_entity> findByShopIdAndRole(
             Long shopId,
