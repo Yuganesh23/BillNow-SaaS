@@ -25,7 +25,7 @@ public class EmailService {
     // 1. 🔐 PASSWORD RESET LINKS & VERIFICATION
     // =========================================================================
 
-    public void sendPasswordResetEmail(String toEmail, String userName, String resetUrl, String otp) {
+    public void sendPasswordResetEmail(String toEmail, String userName, String resetUrl) {
         if (toEmail == null || toEmail.isBlank()) return;
 
         try {
@@ -43,19 +43,16 @@ public class EmailService {
                     + "<div style='max-width:540px; margin:0 auto; background:#FFFFFF; border-radius:12px; border:1px solid #E2E8F0; padding:32px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);'>"
                     + "<div style='text-align:center; margin-bottom:24px;'>"
                     + "  <div style='display:inline-block; background:#4F46E5; color:#ffffff; font-weight:800; font-size:22px; width:44px; height:44px; line-height:44px; border-radius:10px;'>B</div>"
-                    + "  <h2 style='margin:12px 0 4px; color:#0F172A; font-size:20px; font-weight:700;'>Reset Your Password</h2>"
-                    + "  <p style='color:#64748B; font-size:14px; margin:0;'>XenBill Cloud SaaS Billing</p>"
+                    + "  <h2 style='margin:12px 0 4px; color:#0F172A; font-size:22px; font-weight:700;'>Reset Your Password</h2>"
+                    + "  <p style='color:#64748B; font-size:14px; margin:0;'>XenBill Cloud SaaS</p>"
                     + "</div>"
                     + "<p style='font-size:15px; line-height:1.6;'>Hello <strong>" + displayName + "</strong>,</p>"
-                    + "<p style='font-size:14px; line-height:1.6; color:#475569;'>We received a request to reset the password for your XenBill account (<strong>" + toEmail + "</strong>). Click the button below to choose a new password:</p>"
-                    + "<div style='text-align:center; margin:28px 0;'>"
-                    + "  <a href='" + link + "' style='background:#4F46E5; color:#ffffff; padding:12px 28px; text-decoration:none; border-radius:8px; font-weight:600; font-size:14px; display:inline-block;'>Reset Password</a>"
+                    + "<p style='font-size:14px; line-height:1.6; color:#475569;'>We received a request to reset the password for your XenBill account (<strong>" + toEmail + "</strong>). Click the button below to set a new password:</p>"
+                    + "<div style='text-align:center; margin:32px 0;'>"
+                    + "  <a href='" + link + "' style='background:#4F46E5; color:#ffffff; padding:14px 32px; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px; display:inline-block; box-shadow:0 4px 6px -1px rgba(79,70,229,0.3);'>Click Here to Set New Password</a>"
                     + "</div>"
-                    + "<div style='background:#F1F5F9; border-radius:8px; padding:14px; text-align:center; margin-bottom:20px;'>"
-                    + "  <span style='color:#64748B; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>Or use verification OTP code:</span><br/>"
-                    + "  <strong style='font-size:24px; letter-spacing:4px; color:#0F172A;'>" + otp + "</strong>"
-                    + "</div>"
-                    + "<p style='font-size:12px; color:#94A3B8; line-height:1.5;'>This link and OTP code will expire in 15 minutes. If you did not request a password reset, you can safely ignore this email.</p>"
+                    + "<p style='font-size:13px; color:#64748B; line-height:1.6;'>If the button doesn't work, copy and paste this link into your browser:<br/><a href='" + link + "' style='color:#4F46E5; word-break:break-all;'>" + link + "</a></p>"
+                    + "<p style='font-size:12px; color:#94A3B8; line-height:1.5; margin-top:24px;'>This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this email.</p>"
                     + "<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'/>"
                     + "<p style='font-size:12px; color:#94A3B8; text-align:center; margin:0;'>XenBill &bull; <a href='https://xenbill.web.app' style='color:#4F46E5; text-decoration:none;'>xenbill.web.app</a></p>"
                     + "</div></body></html>";
@@ -68,9 +65,13 @@ public class EmailService {
         }
     }
 
+    public void sendPasswordResetEmail(String toEmail, String userName, String resetUrl, String otp) {
+        sendPasswordResetEmail(toEmail, userName, resetUrl);
+    }
+
     public void sendOtpEmail(String toEmail, String otp) {
-        String resetUrl = "https://xenbill.web.app/forgot-password?email=" + toEmail + "&code=" + otp;
-        sendPasswordResetEmail(toEmail, "User", resetUrl, otp);
+        String resetUrl = "https://xenbill.web.app/forgot-password?email=" + toEmail;
+        sendPasswordResetEmail(toEmail, "User", resetUrl);
     }
 
     // =========================================================================

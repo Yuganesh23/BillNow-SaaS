@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
         name = "users",
@@ -53,5 +55,11 @@ public class User_entity {
     @JoinColumn(name = "shop_id",nullable = true)
     @JsonIgnore
     private Shop_entity shop;
+
+    @Column(name = "reset_token", length = 100)
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
 
 }

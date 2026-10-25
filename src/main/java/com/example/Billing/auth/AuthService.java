@@ -299,50 +299,52 @@ public class AuthService {
     }
 
     
+    @Transactional
     public void forgotPassword(String email) {
-        User_entity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        
-        // Generate 6-digit OTP
-        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
-        otpStorage.put(email, otp);
-        
-        String resetUrl = "https://xenbill.web.app/forgot-password?email=" + java.net.URLEncoder.encode(email, java.nio.charset.StandardCharsets.UTF_8) + "&code=" + otp;
-        emailService.sendPasswordResetEmail(email, user.getName(), resetUrl, otp);
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email address is required");
+        }
+
+        User_entity user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new RuntimeException("No account registered with email: " + email));
+
+        // Generate cryptographically secure token and save in database
+        String token = java.util.UUID.randomUUID().toString().replace("-", "");
+        user.setResetToken(token);
+        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+
+        String resetUrl = "https://xenbill.web.app/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetUrl);
     }
 
+    @Transactional
     public void resetPassword(ResetPasswordRequest_Dto request) {
-        User_entity user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with this email"));
-                
-        String expectedOtp = otpStorage.get(request.getEmail());
-        String code = request.getToken();
-        if (code == null || code.isBlank()) {
-            code = request.getMobileNumber();
+        String token = request.getToken();
+        if (token == null || token.isBlank()) {
+            // Also support token passed in mobileNumber field from legacy forms
+            token = request.getMobileNumber();
         }
 
-        boolean valid = false;
-        if (expectedOtp != null && expectedOtp.equals(code)) {
-            valid = true;
-        } else if (user.getMobileNumber() != null && code != null) {
-            String dbDigits = user.getMobileNumber().replaceAll("\\D", "");
-            String inputDigits = code.replaceAll("\\D", "");
-            if (!inputDigits.isEmpty()) {
-                String dbLast10 = dbDigits.length() >= 10 ? dbDigits.substring(dbDigits.length() - 10) : dbDigits;
-                String inputLast10 = inputDigits.length() >= 10 ? inputDigits.substring(inputDigits.length() - 10) : inputDigits;
-                if (!dbLast10.isEmpty() && dbLast10.equals(inputLast10)) {
-                    valid = true;
-                }
-            }
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Password reset token is missing. Please click the reset link sent to your email.");
         }
 
-        if (!valid) {
-            throw new RuntimeException("Invalid verification code or mobile number. Please check your details or request a new reset code.");
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters long");
         }
-        
+
+        User_entity user = userRepository.findByResetToken(token.trim())
+                .orElseThrow(() -> new RuntimeException("Invalid or expired password reset link. Please request a new one."));
+
+        if (user.getResetTokenExpiry() == null || java.time.LocalDateTime.now().isAfter(user.getResetTokenExpiry())) {
+            throw new RuntimeException("Password reset link has expired. Please request a new one.");
+        }
+
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
         userRepository.save(user);
-        otpStorage.remove(request.getEmail());
     }
 
 }

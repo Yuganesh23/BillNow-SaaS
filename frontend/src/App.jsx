@@ -15,6 +15,7 @@ import PurchaseDetails from './pages/PurchaseDetails';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Customers from './pages/Customers';
@@ -50,7 +51,7 @@ function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/terms" element={<LegalPolicies />} />
           <Route path="/privacy" element={<LegalPolicies />} />

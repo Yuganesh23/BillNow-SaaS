@@ -12,6 +12,8 @@ public interface userRepository
 
     boolean existsByEmail(String email);
 
+    Optional<User_entity> findByResetToken(String resetToken);
+
     List<User_entity> findByShopIdAndRole(
             Long shopId,
             String role
