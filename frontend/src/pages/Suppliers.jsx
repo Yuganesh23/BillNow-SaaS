@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSuppliers } from '../api/supplierApi';
 import { LoadingState } from '../components/common/States';
-import { Plus, Search, Mail, Phone, ExternalLink } from 'lucide-react';
+import { Plus, Search, Mail, Phone, ExternalLink, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Suppliers() {
@@ -16,18 +16,22 @@ export default function Suppliers() {
   const fetchSuppliers = async () => {
     try {
       const { data } = await getSuppliers();
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setSuppliers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredSuppliers = suppliers.filter(s => 
-    s.businessName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (s.phone && s.phone.includes(searchTerm))
-  );
+  const list = Array.isArray(suppliers) ? suppliers : [];
+  const query = (searchTerm || '').trim().toLowerCase();
+  const filteredSuppliers = list.filter(s => {
+    const name = (s.businessName || '').toLowerCase();
+    const phone = s.phone ? String(s.phone) : '';
+    return name.includes(query) || phone.includes(query);
+  });
 
   if (loading) return <LoadingState />;
 
@@ -69,27 +73,27 @@ export default function Suppliers() {
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Outstanding</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
-                      </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {filteredSuppliers.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-slate-500">
-                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                        <Users className="w-6 h-6 text-slate-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-1">No suppliers yet</h3>
-                      <p className="text-sm max-w-sm mb-4">Add your first supplier to start managing purchases and outstanding balances.</p>
-                      <Link to="/suppliers/new" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Supplier
-                      </Link>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-200">
+            {filteredSuppliers.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-500">
+                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                      <Users className="w-6 h-6 text-slate-400" />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredSuppliers.map((supplier) => (
-                  <tr key={supplier.id} className="hover:bg-slate-50">
+                    <h3 className="text-lg font-medium text-slate-900 mb-1">No suppliers yet</h3>
+                    <p className="text-sm max-w-sm mb-4">Add your first supplier to start managing purchases and outstanding balances.</p>
+                    <Link to="/suppliers/new" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Supplier
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredSuppliers.map((supplier) => (
+                <tr key={supplier.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-slate-900">{supplier.businessName}</div>
                   <div className="text-xs text-slate-500">{supplier.contactPerson}</div>
@@ -116,7 +120,7 @@ export default function Suppliers() {
                 </td>
               </tr>
             )))}
-            </tbody>
+          </tbody>
         </table>
         </div>
       </div>
