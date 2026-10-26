@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
 import axiosClient from '../api/axiosClient';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function Subscription() {
   const { user } = useAuth();
@@ -206,7 +207,7 @@ export default function Subscription() {
             }`}>
             {currentPlan === 'BASE' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
              currentPlan === 'BASE' && billingCycle === 'ANNUAL' ? 'Switch to Annual' : 
-             upgradingTier === 'BASE' ? 'Processing...' : 'Subscribe to Base'}
+             upgradingTier === 'BASE' ? <span className="inline-flex items-center justify-center"><ButtonSpinner className="mr-2 text-current" />Processing...</span> : 'Subscribe to Base'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Unlimited Invoices</li>
@@ -247,7 +248,7 @@ export default function Subscription() {
             {currentPlan === 'PRO' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
              currentPlan === 'PRO' && billingCycle === 'ANNUAL' ? 'Switch to Annual' :
              currentPlan === 'ENTERPRISE' ? 'Included' : 
-             upgradingTier === 'PRO' ? 'Processing...' : 'Upgrade to Pro'}
+             upgradingTier === 'PRO' ? <span className="inline-flex items-center justify-center"><ButtonSpinner className="mr-2 text-current" />Processing...</span> : 'Upgrade to Pro'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Everything in Base</li>
@@ -288,7 +289,7 @@ export default function Subscription() {
             }`}>
             {currentPlan === 'ENTERPRISE' && billingCycle === 'MONTHLY' ? 'Current Plan' : 
              currentPlan === 'ENTERPRISE' && billingCycle === 'ANNUAL' ? 'Switch to Annual' : 
-             upgradingTier === 'ENTERPRISE' ? 'Processing...' : 'Upgrade to Enterprise'}
+             upgradingTier === 'ENTERPRISE' ? <span className="inline-flex items-center justify-center"><ButtonSpinner className="mr-2 text-current" />Processing...</span> : 'Upgrade to Enterprise'}
           </button>
           <ul className="mt-8 space-y-3 text-sm text-slate-600">
             <li className="flex gap-x-3"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Everything in Pro</li>

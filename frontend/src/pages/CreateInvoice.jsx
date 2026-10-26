@@ -8,6 +8,7 @@ import { calculateInvoiceTotals } from '../utils/invoiceCalc';
 import { useBranch } from '../context/BranchContext';
 import { Plus, Trash2, ArrowLeft, Save, QrCode, Search, Phone, X, Check } from 'lucide-react';
 import QRScannerModal from '../components/QRScannerModal';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 import { Link } from 'react-router-dom';
 
 export default function CreateInvoice() {
@@ -502,8 +503,17 @@ export default function CreateInvoice() {
             disabled={!isValid || isSubmitting}
             className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Saving...' : 'Save & Create Invoice'}
-            {!isSubmitting && <Save className="ml-2 w-5 h-5" />}
+            {isSubmitting ? (
+              <>
+                <ButtonSpinner className="text-white mr-2" />
+                Saving Invoice...
+              </>
+            ) : (
+              <>
+                Save & Create Invoice
+                <Save className="ml-2 w-5 h-5" />
+              </>
+            )}
           </button>
         </div>
       </form>

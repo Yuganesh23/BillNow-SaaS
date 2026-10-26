@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
 import { Lock, ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
 import BrandLogo from '../components/common/BrandLogo';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -116,7 +117,7 @@ export default function ResetPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -137,7 +138,7 @@ export default function ResetPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat new password"
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -146,11 +147,18 @@ export default function ResetPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white ${
-                    loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  className={`w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white ${
+                    loading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors`}
                 >
-                  {loading ? 'Saving password...' : 'Set New Password'}
+                  {loading ? (
+                    <>
+                      <ButtonSpinner />
+                      <span>Saving new password...</span>
+                    </>
+                  ) : (
+                    'Set New Password'
+                  )}
                 </button>
               </div>
             </form>

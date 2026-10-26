@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { User, Store, Mail, Phone, MapPin, Lock, UserPlus, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import BrandLogo from '../components/common/BrandLogo';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -49,11 +51,8 @@ export default function Register() {
       {/* Left Marketing Panel - Hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12 lg:p-16 xl:p-20 text-white">
         <div>
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center transform rotate-3 shadow-lg shadow-green-500/20">
-              <span className="text-white font-bold text-2xl transform -rotate-3">X</span>
-            </div>
-            <span className="text-3xl font-bold tracking-tight">XenBill</span>
+          <div className="mb-16">
+            <BrandLogo size="lg" theme="light" />
           </div>
           
           <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
@@ -117,11 +116,8 @@ export default function Register() {
       <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-white overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:max-w-md">
           {/* Mobile Header (Hidden on Desktop) */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center transform rotate-3">
-              <span className="text-white font-bold text-xl transform -rotate-3">X</span>
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">XenBill</span>
+          <div className="lg:hidden flex justify-center mb-8">
+            <BrandLogo size="md" theme="dark" />
           </div>
 
           <div>
@@ -276,10 +272,19 @@ export default function Register() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all hover:shadow-md"
+                  className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all hover:shadow-md"
                 >
-                  {isSubmitting ? 'Creating account...' : 'Create Account'}
-                  {!isSubmitting && <UserPlus className="ml-2 h-5 w-5" />}
+                  {isSubmitting ? (
+                    <>
+                      <ButtonSpinner className="text-white mr-2" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      Create Account
+                      <UserPlus className="ml-2 h-5 w-5" />
+                    </>
+                  )}
                 </button>
               </div>
               

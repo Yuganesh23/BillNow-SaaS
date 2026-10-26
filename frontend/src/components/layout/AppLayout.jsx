@@ -52,13 +52,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-50 lg:hidden print:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col print:hidden`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200">
           <BrandLogo size="sm" theme="dark" />
           <button onClick={() => setMobileOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-700">
@@ -134,17 +134,23 @@ export const AppLayout = () => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 print:bg-white">
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 sm:px-6 lg:px-8">
-          <button
-            className="text-slate-500 hover:text-slate-700 lg:hidden"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
+      <div className="lg:pl-64 print:pl-0 flex flex-col flex-1">
+        <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 sm:px-6 lg:px-8 print:hidden">
+          <div className="flex items-center lg:hidden">
+            <button
+              className="text-slate-500 hover:text-slate-700 p-1 -ml-1 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <Menu size={24} />
+            </button>
+            <div className="ml-3">
+              <BrandLogo variant="icon" size="sm" />
+            </div>
+          </div>
           
           <div className="flex-1 px-2 sm:px-4 flex justify-end">
             {user?.role === 'SHOP_OWNER' && (
@@ -154,7 +160,7 @@ export const AppLayout = () => {
           
           <div className="flex items-center">
             <span className="text-sm font-medium text-slate-700">{user?.name || 'User'}</span>
-            <div className="w-8 h-8 ml-3 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+            <div className="w-8 h-8 ml-3 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">
               {(user?.name || 'U').charAt(0)}
             </div>
           </div>

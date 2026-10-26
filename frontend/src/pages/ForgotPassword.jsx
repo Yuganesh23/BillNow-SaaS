@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { forgotPassword } from '../api/authApi';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import BrandLogo from '../components/common/BrandLogo';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -84,7 +85,7 @@ export default function ForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -93,11 +94,18 @@ export default function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white ${
-                    loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  className={`w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white ${
+                    loading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors`}
                 >
-                  {loading ? 'Sending link...' : 'Send Reset Link'}
+                  {loading ? (
+                    <>
+                      <ButtonSpinner />
+                      <span>Sending reset link...</span>
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
                 </button>
               </div>
             </form>

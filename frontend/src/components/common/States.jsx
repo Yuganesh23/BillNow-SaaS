@@ -1,12 +1,43 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import iconLogo from '../../assets/brand/xenbill-logo-icon.png';
 
-export const LoadingState = ({ message = 'Loading...' }) => (
-  <div className="flex flex-col items-center justify-center p-12">
-    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
-    <p className="text-slate-500">{message}</p>
-  </div>
-);
+export const LoadingState = ({ message = 'Loading...', fullScreen = false }) => {
+  if (fullScreen) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50/95 backdrop-blur-sm"
+      >
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 rounded-2xl bg-emerald-400/20 blur-md animate-ping motion-reduce:hidden" />
+          <img
+            src={iconLogo}
+            alt="XenBill"
+            className="w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/20 animate-pulse motion-reduce:animate-none object-contain select-none"
+          />
+        </div>
+        <p className="mt-4 text-sm font-semibold text-slate-800">{message}</p>
+        <span className="sr-only">{message}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-12 w-full">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 rounded-xl bg-emerald-400/20 blur-sm animate-ping motion-reduce:hidden" />
+        <img
+          src={iconLogo}
+          alt="XenBill"
+          className="w-10 h-10 rounded-xl shadow-md shadow-emerald-500/20 animate-pulse motion-reduce:animate-none object-contain select-none"
+        />
+      </div>
+      <p className="mt-3 text-sm font-medium text-slate-500">{message}</p>
+      <span className="sr-only">{message}</span>
+    </div>
+  );
+};
 
 export const EmptyState = ({ icon: Icon, title, description, action }) => (
   <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 rounded-lg bg-slate-50">

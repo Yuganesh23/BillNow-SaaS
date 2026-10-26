@@ -1,51 +1,57 @@
 import React from 'react';
+import horizontalLight from '../../assets/brand/xenbill-logo-transparent.png';
+import horizontalDark from '../../assets/brand/xenbill-logo-dark.png';
+import iconLogo from '../../assets/brand/xenbill-logo-icon.png';
 
 /**
- * Standard XenBill Logo & Branding Component
- * Features the signature tilted green badge with 'X' and bold XenBill typography.
+ * XenBill Official Brand Logo Component
  *
- * @param {string} size - 'sm' | 'md' | 'lg' | 'xl' (default: 'md')
- * @param {string} theme - 'dark' (dark text for light bg) | 'light' (white text for dark bg)
- * @param {string} className - Additional CSS classes
+ * @param {('horizontal'|'icon')} variant - 'horizontal' (wordmark + icon) or 'icon' (standalone mark)
+ * @param {('xs'|'sm'|'md'|'lg'|'xl')} size - Component sizing
+ * @param {('dark'|'light')} theme - 'dark' (for light backgrounds) | 'light' (for dark backgrounds)
+ * @param {string} className - Optional additional CSS classes
+ * @param {string} alt - Accessible image description
  */
-export default function BrandLogo({ size = 'md', theme = 'dark', className = '' }) {
-  const boxSizes = {
-    sm: 'w-8 h-8 rounded-md',
-    md: 'w-10 h-10 rounded-lg',
-    lg: 'w-12 h-12 rounded-xl',
-    xl: 'w-14 h-14 rounded-2xl'
+export default function BrandLogo({
+  variant = 'horizontal',
+  size = 'md',
+  theme = 'dark',
+  className = '',
+  alt = 'XenBill'
+}) {
+  const heights = {
+    xs: variant === 'icon' ? 'h-6 w-6' : 'h-6 w-auto',
+    sm: variant === 'icon' ? 'h-8 w-8' : 'h-8 w-auto',
+    md: variant === 'icon' ? 'h-10 w-10' : 'h-10 w-auto',
+    lg: variant === 'icon' ? 'h-12 w-12' : 'h-12 w-auto',
+    xl: variant === 'icon' ? 'h-16 w-16' : 'h-16 w-auto'
   };
 
-  const letterSizes = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
-    xl: 'text-3xl'
-  };
+  const selectedHeight = heights[size] || heights.md;
 
-  const textSizes = {
-    sm: 'text-xl',
-    md: 'text-2xl',
-    lg: 'text-3xl',
-    xl: 'text-4xl'
-  };
+  if (variant === 'icon') {
+    return (
+      <img
+        src={iconLogo}
+        alt={alt}
+        className={`object-contain select-none flex-shrink-0 transition-transform duration-200 ${selectedHeight} ${className}`}
+        loading="eager"
+      />
+    );
+  }
 
-  const textColor = theme === 'light' ? 'text-white' : 'text-slate-900';
+  const logoSrc = theme === 'light' ? horizontalDark : horizontalLight;
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div
-        className={`${boxSizes[size] || boxSizes.md} bg-green-500 flex items-center justify-center transform rotate-3 shadow-md shadow-green-500/20 flex-shrink-0`}
-      >
-        <span
-          className={`text-white font-bold ${letterSizes[size] || letterSizes.md} transform -rotate-3 select-none`}
-        >
-          X
-        </span>
-      </div>
-      <span className={`${textSizes[size] || textSizes.md} font-bold tracking-tight ${textColor} select-none`}>
-        XenBill
-      </span>
+    <div className={`inline-flex items-center flex-shrink-0 ${className}`}>
+      <img
+        src={logoSrc}
+        alt={alt}
+        className={`object-contain select-none ${selectedHeight}`}
+        loading="eager"
+      />
     </div>
   );
 }
+
+export { BrandLogo as XenBillLogo };
