@@ -38,7 +38,7 @@ class PasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(authService, "frontendBaseUrl", "https://xenbill.web.app");
+        ReflectionTestUtils.setField(authService, "frontendBaseUrl", "https://xenbill.app");
 
         testUser = User_entity.builder()
                 .id(1L)
@@ -70,7 +70,7 @@ class PasswordResetServiceTest {
         verify(emailService).sendPasswordResetEmail(eq("owner@example.com"), eq("Test Owner"), linkCaptor.capture());
         String capturedUrl = linkCaptor.getValue();
 
-        assertTrue(capturedUrl.startsWith("https://xenbill.web.app/reset-password?token="));
+        assertTrue(capturedUrl.startsWith("https://xenbill.app/reset-password?token="));
         String rawToken = capturedUrl.substring(capturedUrl.indexOf("token=") + 6);
         assertEquals(64, rawToken.length(), "Raw token has 32 secure bytes (64 hex characters)");
 

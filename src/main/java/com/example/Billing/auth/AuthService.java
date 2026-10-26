@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AuthService {
 
-    @Value("${frontend.base-url:${FRONTEND_BASE_URL:https://xenbill.web.app}}")
+    @Value("${frontend.base-url:${FRONTEND_BASE_URL:https://xenbill.app}}")
     private String frontendBaseUrl;
 
     private final userRepository userRepository;
@@ -367,7 +367,7 @@ public class AuthService {
         // 4. Construct reset link using configured frontend URL
         String baseUrl = (frontendBaseUrl != null && !frontendBaseUrl.isBlank())
                 ? frontendBaseUrl.replaceAll("/+$", "")
-                : "https://xenbill.web.app";
+                : "https://xenbill.app";
         String resetUrl = baseUrl + "/reset-password?token=" + rawToken;
 
         // 5. Deliver email via Resend

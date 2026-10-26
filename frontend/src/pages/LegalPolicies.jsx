@@ -83,7 +83,7 @@ export default function LegalPolicies() {
               <p className="text-sm text-slate-500 mb-6">Last updated: October 24, 2026</p>
 
               <h2 className="text-xl font-semibold text-slate-900 mt-6 mb-2">1. Acceptance of Terms</h2>
-              <p>By accessing and using XenBill (https://xenbill.web.app), you agree to comply with and be bound by these Terms and Conditions. XenBill is a cloud-based billing, GST invoicing, and inventory management SaaS platform operated for retail and wholesale business owners.</p>
+              <p>By accessing and using XenBill (https://xenbill.app), you agree to comply with and be bound by these Terms and Conditions. XenBill is a cloud-based billing, GST invoicing, and inventory management SaaS platform operated for retail and wholesale business owners.</p>
 
               <h2 className="text-xl font-semibold text-slate-900 mt-6 mb-2">2. Subscription and Service Access</h2>
               <p>XenBill offers subscription tiers (BASE, PRO, and ENTERPRISE) available on Monthly (30-day) and Annual (365-day) prepaid billing cycles. Payment processing is securely facilitated via certified payment partners, including Razorpay.</p>

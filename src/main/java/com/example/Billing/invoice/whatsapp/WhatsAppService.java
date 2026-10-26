@@ -24,7 +24,10 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +60,7 @@ public class WhatsAppService {
     @Value("${msg91.whatsapp.authkey:562890AIne6oBFlfL6a9682ecP1}")
     private String msg91AuthKey;
 
-    @Value("${msg91.whatsapp.integrated-number:15553413072}")
+    @Value("${msg91.whatsapp.integrated-number:919080824626}")
     private String msg91IntegratedNumber;
 
     @Value("${msg91.whatsapp.sender-number:9080824626}")
@@ -66,7 +69,7 @@ public class WhatsAppService {
     @Value("${msg91.whatsapp.namespace:f2e44b63_7a0b_4633_9ef1_6f732c68c329}")
     private String msg91Namespace;
 
-    @Value("${msg91.whatsapp.template-name:invoice_pdf}")
+    @Value("${msg91.whatsapp.template-name:xenbill_invoice_generated}")
     private String msg91TemplateName;
 
     @Value("${msg91.whatsapp.language:en}")
@@ -175,7 +178,6 @@ public class WhatsAppService {
         String authKey = msg91AuthKey;
         String integratedNumber = msg91IntegratedNumber;
 
-        // Check if shop has custom credentials stored
         if (config != null) {
             if (config.getAccessToken() != null && !config.getAccessToken().isBlank()) {
                 authKey = config.getAccessToken().trim();
@@ -206,7 +208,11 @@ public class WhatsAppService {
                 : "XenBill Store";
 
         BigDecimal total = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
-        String formattedAmount = "₹" + total.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        String formattedAmount = total.setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        String invoiceDate = (invoice.getCreatedAt() != null)
+                ? invoice.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
         String pdfBase64 = "data:application/pdf;base64," + Base64.getEncoder().encodeToString(pdf);
 
@@ -220,13 +226,15 @@ public class WhatsAppService {
         Map<String, Object> body2 = Map.of("type", "text", "value", shopName);
         Map<String, Object> body3 = Map.of("type", "text", "value", safeInvoiceNumber);
         Map<String, Object> body4 = Map.of("type", "text", "value", formattedAmount);
+        Map<String, Object> body5 = Map.of("type", "text", "value", invoiceDate);
 
         Map<String, Object> components = Map.of(
                 "header_1", header1,
                 "body_1", body1,
                 "body_2", body2,
                 "body_3", body3,
-                "body_4", body4
+                "body_4", body4,
+                "body_5", body5
         );
 
         Map<String, Object> toAndComponent = Map.of(
@@ -234,15 +242,16 @@ public class WhatsAppService {
                 "components", components
         );
 
-        Map<String, Object> template = Map.of(
-                "name", msg91TemplateName,
-                "language", Map.of(
-                        "code", msg91Language,
-                        "policy", "deterministic"
-                ),
-                "namespace", msg91Namespace,
-                "to_and_components", List.of(toAndComponent)
-        );
+        Map<String, Object> template = new LinkedHashMap<>();
+        template.put("name", msg91TemplateName);
+        template.put("language", Map.of(
+                "code", msg91Language,
+                "policy", "deterministic"
+        ));
+        if (msg91Namespace != null && !msg91Namespace.isBlank()) {
+            template.put("namespace", msg91Namespace);
+        }
+        template.put("to_and_components", List.of(toAndComponent));
 
         Map<String, Object> payload = Map.of(
                 "messaging_product", "whatsapp",
@@ -256,8 +265,8 @@ public class WhatsAppService {
                 "payload", payload
         );
 
-        log.info("Sending invoice #{} via MSG91 WhatsApp to {} (sender: {})",
-                safeInvoiceNumber, whatsappNumber, integratedNumber);
+        log.info("Sending invoice #{} via MSG91 WhatsApp to {} (sender: {}, template: {})",
+                safeInvoiceNumber, whatsappNumber, integratedNumber, msg91TemplateName);
 
         try {
             var response = getRestClient().post()
