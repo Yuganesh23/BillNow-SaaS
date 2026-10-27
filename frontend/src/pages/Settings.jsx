@@ -3,6 +3,8 @@ import axiosClient from '../api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
 import { Building2, Plus, Mail, Phone, User, Edit2, Trash2, MapPin } from 'lucide-react';
+import { LoadingState } from '../components/common/States';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function Settings() {
   const { user, logout } = useAuth();
@@ -135,7 +137,7 @@ export default function Settings() {
     }
   };
 
-  if (loading) return <div className="p-4 sm:p-6 lg:p-8">Loading...</div>;
+  if (loading) return <LoadingState message="Loading settings & branches..." />;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -201,7 +203,12 @@ export default function Settings() {
 
             <div className="pt-4">
               <button onClick={handleSaveUser} disabled={savingUser} className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-slate-900 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50">
-                {savingUser ? 'Saving...' : 'Save Profile Changes'}
+                {savingUser ? (
+                  <>
+                    <ButtonSpinner className="text-white mr-2" />
+                    Saving Profile...
+                  </>
+                ) : 'Save Profile Changes'}
               </button>
             </div>
           </div>

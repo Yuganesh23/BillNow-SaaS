@@ -3,6 +3,8 @@ import { BarChart3, TrendingUp, TrendingDown, MapPin, UserPlus, IndianRupee, Fil
 import { useBranch } from '../context/BranchContext';
 import axiosClient from '../api/axiosClient';
 import { getSalesReport, getProductsReport, getCustomersReport, getPaymentsReport, getNewCustomersReport } from '../api/reportApi';
+import { LoadingState } from '../components/common/States';
+import { ButtonSpinner } from '../components/common/XenBillLoader';
 
 export default function Reports() {
   const [salesReport, setSalesReport] = useState(null);
@@ -145,11 +147,7 @@ export default function Reports() {
   }, [timeFilter, selectedDate, weekFrom, weekTo, selectedMonth]);
 
   if (loading && !salesReport) {
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LoadingState message="Loading reports & analytics..." />;
   }
 
   if (!salesReport) {
@@ -267,7 +265,12 @@ export default function Reports() {
             ) : (
               <Lock className="w-4 h-4 text-amber-600" />
             )}
-            {exportingGst ? 'Exporting...' : 'Export GST (Excel)'}
+            {exportingGst ? (
+              <>
+                <ButtonSpinner className="text-white mr-1.5" />
+                Exporting...
+              </>
+            ) : 'Export GST (Excel)'}
             {!isEnterprise && (
               <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">
                 Enterprise
@@ -276,7 +279,10 @@ export default function Reports() {
           </button>
 
           {loading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
+            <div className="flex items-center text-xs text-slate-500 gap-1.5">
+              <ButtonSpinner className="text-emerald-600 w-3.5 h-3.5" />
+              <span>Updating...</span>
+            </div>
           )}
         </div>
       </div>

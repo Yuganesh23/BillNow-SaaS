@@ -18,22 +18,32 @@ export const LoadingState = ({ message = 'Loading...', fullScreen = false }) => 
           />
         </div>
         <p className="mt-4 text-sm font-semibold text-slate-800">{message}</p>
+        <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
+        </div>
         <span className="sr-only">{message}</span>
       </div>
     );
   }
 
   return (
-    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-12 w-full">
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-12 w-full min-h-[50vh]">
       <div className="relative flex items-center justify-center">
         <div className="absolute inset-0 rounded-xl bg-emerald-400/20 blur-sm animate-ping motion-reduce:hidden" />
         <img
           src={iconLogo}
           alt="XenBill"
-          className="w-10 h-10 rounded-xl shadow-md shadow-emerald-500/20 animate-pulse motion-reduce:animate-none object-contain select-none"
+          className="w-12 h-12 rounded-xl shadow-md shadow-emerald-500/20 animate-pulse motion-reduce:animate-none object-contain select-none"
         />
       </div>
-      <p className="mt-3 text-sm font-medium text-slate-500">{message}</p>
+      <p className="mt-4 text-sm font-medium text-slate-600">{message}</p>
+      <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
+      </div>
       <span className="sr-only">{message}</span>
     </div>
   );
