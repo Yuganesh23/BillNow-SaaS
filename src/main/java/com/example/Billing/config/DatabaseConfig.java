@@ -192,6 +192,9 @@ public class DatabaseConfig {
                 }
             }
 
+            // Remove channel_binding if present: pgBouncer / Neon connection pooler does not support channel binding
+            queryParams.remove("channel_binding");
+
             // Neon requires SSL connection
             if (!queryParams.containsKey("sslmode")) {
                 queryParams.put("sslmode", "require");
